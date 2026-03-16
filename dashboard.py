@@ -720,111 +720,6 @@ for col,(cls,label,val,sub) in zip([c1,c2,c3,c4,c5,c6], kpis):
             <div class="kpi-sub">{sub}</div>
         </div>""", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── NOTIFICACIONES: cambios de precio semana a semana ─────────────────────
-_notif_fechas = sorted(df_full["Fecha"].unique())
-if len(_notif_fechas) >= 2:
-    _fn_ant = _notif_fechas[-2]
-    _fn_act = _notif_fechas[-1]
-    _fn_ant_str = pd.Timestamp(_fn_ant).strftime("%d/%m/%Y")
-    _fn_act_str = pd.Timestamp(_fn_act).strftime("%d/%m/%Y")
-
-    # Cambios de precio de góndola real: por producto único (Producto + Cadena), sin promediar
-    _KEY = ["Producto", "Cadena"]
-    _gond_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
-                 .rename(columns={"Precio": "p_ant"}))
-    _gond_act = (df_full[(df_full["Fecha"] == _fn_act) & (~df_full["En_oferta"])]
-                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
-                 .rename(columns={"Precio": "p_act"}))
-
-    _cambios = (_gond_ant.merge(_gond_act, on=_KEY + ["Marca_raw"])
-                .assign(delta=lambda d: d["p_act"] - d["p_ant"],
-                        delta_pct=lambda d: ((d["p_act"] / d["p_ant"]) - 1) * 100)
-                .query("delta != 0")
-                .sort_values("delta_pct"))
-
-    _subas = _cambios[_cambios["delta"] > 0].sort_values("delta_pct", ascending=False)
-    _bajas = _cambios[_cambios["delta"] < 0].sort_values("delta_pct")
-
-    # Ofertas nuevas: productos únicos (Producto + Cadena) sin oferta antes, con oferta ahora
-    _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                   [_KEY].drop_duplicates())
-    _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
-                   .drop_duplicates(subset=_KEY)
-                   [_KEY + ["Precio", "Precio_oferta", "Descuento_pct"]]
-                   .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",
-                                    "Descuento_pct": "desc"}))
-    _nuevas_of = _con_of_act.merge(_sin_of_ant, on=_KEY, how="inner")
-
-    _total    = len(_cambios)
-    _total_of = len(_nuevas_of)
-    _hay_algo = _total > 0 or _total_of > 0
-
-    _partes = []
-    if _total > 0:
-        _partes.append(f"{_total} cambio{'s' if _total != 1 else ''} de precio")
-    if _total_of > 0:
-        _partes.append(f"{_total_of} oferta{'s' if _total_of != 1 else ''} nueva{'s' if _total_of != 1 else ''}")
-    _label = ("🔔 " + " · ".join(_partes) + f" · {_fn_ant_str} → {_fn_act_str}"
-              if _hay_algo else
-              f"✅ Sin cambios de precio ni ofertas nuevas · {_fn_ant_str} → {_fn_act_str}")
-
-    def _fila(sku, cadena, flecha, pct_str, p_de, p_a, color_flecha):
-        return (
-            f"<div style='padding:5px 0;border-bottom:1px solid #E5E7EB'>"
-            f"<span style='font-size:0.82rem;color:#111827'>"
-            f"<b style='word-break:break-word'>{sku}</b><br>"
-            f"<span style='color:#6B7280'>{cadena}</span>&nbsp;&nbsp;"
-            f"<span style='color:{color_flecha}'>{flecha} {pct_str}</span>"
-            f"&nbsp;&nbsp;${p_de:,.0f} → <b>${p_a:,.0f}</b>"
-            f"</span></div>"
-        )
-
-    def _titulo_col(emoji, texto, n):
-        st.markdown(
-            f"<p style='font-size:0.95rem;font-weight:700;color:#111827;margin:0 0 4px 0'>"
-            f"{emoji} {texto} ({n})</p>"
-            f"<p style='font-size:0.75rem;color:#6B7280;margin:0 0 8px 0'>"
-            f"{_fn_ant_str} → {_fn_act_str}</p>",
-            unsafe_allow_html=True)
-
-    with st.expander(_label, expanded=_hay_algo):
-        if not _hay_algo:
-            st.info("Ningún cambio detectado entre las últimas dos semanas.")
-        else:
-            _col_s, _col_b, _col_o = st.columns(3, gap="large")
-            with _col_s:
-                _titulo_col("🔴", "Subas", len(_subas))
-                if _subas.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna suba.</span>", unsafe_allow_html=True)
-                for _, r in _subas.iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▲",
-                                      f"{r['delta_pct']:+.1f}%",
-                                      r["p_ant"], r["p_act"], "#DC2626"),
-                                unsafe_allow_html=True)
-            with _col_b:
-                _titulo_col("🟢", "Bajas", len(_bajas))
-                if _bajas.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna baja.</span>", unsafe_allow_html=True)
-                for _, r in _bajas.iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
-                                      f"{r['delta_pct']:+.1f}%",
-                                      r["p_ant"], r["p_act"], "#16A34A"),
-                                unsafe_allow_html=True)
-            with _col_o:
-                _titulo_col("🏷️", "Ofertas nuevas", len(_nuevas_of))
-                if _nuevas_of.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna oferta nueva.</span>", unsafe_allow_html=True)
-                for _, r in _nuevas_of.sort_values("desc", ascending=False).iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
-                                      f"{r['desc']:.0f}% dto.",
-                                      r["p_gond"], r["p_of"], "#B45309"),
-                                unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
 # ── TABS ──────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "📊  Resumen",
@@ -3000,3 +2895,105 @@ with tab11:
 
         except Exception as _td_err:
             st.error(f"No se puede armar la tabla con esa combinación: {_td_err}")
+
+# ── NOTIFICACIONES: cambios de precio semana a semana ─────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+_notif_fechas = sorted(df_full["Fecha"].unique())
+if len(_notif_fechas) >= 2:
+    _fn_ant = _notif_fechas[-2]
+    _fn_act = _notif_fechas[-1]
+    _fn_ant_str = pd.Timestamp(_fn_ant).strftime("%d/%m/%Y")
+    _fn_act_str = pd.Timestamp(_fn_act).strftime("%d/%m/%Y")
+
+    # Cambios de precio de góndola real: por producto único (Producto + Cadena), sin promediar
+    _KEY = ["Producto", "Cadena"]
+    _gond_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
+                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
+                 .rename(columns={"Precio": "p_ant"}))
+    _gond_act = (df_full[(df_full["Fecha"] == _fn_act) & (~df_full["En_oferta"])]
+                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
+                 .rename(columns={"Precio": "p_act"}))
+
+    _cambios = (_gond_ant.merge(_gond_act, on=_KEY + ["Marca_raw"])
+                .assign(delta=lambda d: d["p_act"] - d["p_ant"],
+                        delta_pct=lambda d: ((d["p_act"] / d["p_ant"]) - 1) * 100)
+                .query("delta != 0")
+                .sort_values("delta_pct"))
+
+    _subas = _cambios[_cambios["delta"] > 0].sort_values("delta_pct", ascending=False)
+    _bajas = _cambios[_cambios["delta"] < 0].sort_values("delta_pct")
+
+    # Ofertas nuevas: productos únicos (Producto + Cadena) sin oferta antes, con oferta ahora
+    _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
+                   [_KEY].drop_duplicates())
+    _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
+                   .drop_duplicates(subset=_KEY)
+                   [_KEY + ["Precio", "Precio_oferta", "Descuento_pct"]]
+                   .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",
+                                    "Descuento_pct": "desc"}))
+    _nuevas_of = _con_of_act.merge(_sin_of_ant, on=_KEY, how="inner")
+
+    _total    = len(_cambios)
+    _total_of = len(_nuevas_of)
+    _hay_algo = _total > 0 or _total_of > 0
+
+    _partes = []
+    if _total > 0:
+        _partes.append(f"{_total} cambio{'s' if _total != 1 else ''} de precio")
+    if _total_of > 0:
+        _partes.append(f"{_total_of} oferta{'s' if _total_of != 1 else ''} nueva{'s' if _total_of != 1 else ''}")
+    _label = ("🔔 " + " · ".join(_partes) + f" · {_fn_ant_str} → {_fn_act_str}"
+              if _hay_algo else
+              f"✅ Sin cambios de precio ni ofertas nuevas · {_fn_ant_str} → {_fn_act_str}")
+
+    def _fila(sku, cadena, flecha, pct_str, p_de, p_a, color_flecha):
+        return (
+            f"<div style='padding:5px 0;border-bottom:1px solid #E5E7EB'>"
+            f"<span style='font-size:0.82rem;color:#111827'>"
+            f"<b style='word-break:break-word'>{sku}</b><br>"
+            f"<span style='color:#6B7280'>{cadena}</span>&nbsp;&nbsp;"
+            f"<span style='color:{color_flecha}'>{flecha} {pct_str}</span>"
+            f"&nbsp;&nbsp;${p_de:,.0f} → <b>${p_a:,.0f}</b>"
+            f"</span></div>"
+        )
+
+    def _titulo_col(emoji, texto, n):
+        st.markdown(
+            f"<p style='font-size:0.95rem;font-weight:700;color:#111827;margin:0 0 4px 0'>"
+            f"{emoji} {texto} ({n})</p>"
+            f"<p style='font-size:0.75rem;color:#6B7280;margin:0 0 8px 0'>"
+            f"{_fn_ant_str} → {_fn_act_str}</p>",
+            unsafe_allow_html=True)
+
+    with st.expander(_label, expanded=_hay_algo):
+        if not _hay_algo:
+            st.info("Ningún cambio detectado entre las últimas dos semanas.")
+        else:
+            _col_s, _col_b, _col_o = st.columns(3, gap="large")
+            with _col_s:
+                _titulo_col("🔴", "Subas", len(_subas))
+                if _subas.empty:
+                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna suba.</span>", unsafe_allow_html=True)
+                for _, r in _subas.iterrows():
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▲",
+                                      f"{r['delta_pct']:+.1f}%",
+                                      r["p_ant"], r["p_act"], "#DC2626"),
+                                unsafe_allow_html=True)
+            with _col_b:
+                _titulo_col("🟢", "Bajas", len(_bajas))
+                if _bajas.empty:
+                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna baja.</span>", unsafe_allow_html=True)
+                for _, r in _bajas.iterrows():
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
+                                      f"{r['delta_pct']:+.1f}%",
+                                      r["p_ant"], r["p_act"], "#16A34A"),
+                                unsafe_allow_html=True)
+            with _col_o:
+                _titulo_col("🏷️", "Ofertas nuevas", len(_nuevas_of))
+                if _nuevas_of.empty:
+                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna oferta nueva.</span>", unsafe_allow_html=True)
+                for _, r in _nuevas_of.sort_values("desc", ascending=False).iterrows():
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
+                                      f"{r['desc']:.0f}% dto.",
+                                      r["p_gond"], r["p_of"], "#B45309"),
+                                unsafe_allow_html=True)
