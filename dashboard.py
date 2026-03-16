@@ -307,6 +307,35 @@ html,body,[class*="css"],.stApp{font-family:'Inter',sans-serif!important}
 </style>
 """, unsafe_allow_html=True)
 
+# ── Detección automática mobile ───────────────────────────────────────────
+import streamlit.components.v1 as _components
+_components.html("""
+<script>
+(function(){
+    var w = window.innerWidth || document.documentElement.clientWidth;
+    var p = new URLSearchParams(window.parent.location.search);
+    var already = p.get('m');
+    if(w <= 768 && already !== '1'){
+        p.set('m','1'); window.parent.location.search = p.toString();
+    } else if(w > 768 && already === '1'){
+        p.delete('m'); window.parent.location.search = p.toString();
+    }
+})();
+</script>
+""", height=0, scrolling=False)
+
+is_mobile = st.query_params.get("m", "0") == "1"
+
+# helpers de layout responsivo
+def _rcols(*desktop_weights):
+    """En mobile devuelve una sola columna, en desktop las columnas pedidas."""
+    if is_mobile:
+        return st.columns([1])
+    return st.columns(list(desktop_weights))
+
+def _chart_h(desktop=420, mobile=280):
+    return mobile if is_mobile else desktop
+
 # ── Extracción de marca ───────────────────────────────────────────────────
 _ALIAS = {
     "familia zuccardi":"Familia Zuccardi","filippo berio":"Filippo Berio",
