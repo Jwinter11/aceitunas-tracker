@@ -730,15 +730,16 @@ if len(_notif_fechas) >= 2:
     _fn_ant_str = pd.Timestamp(_fn_ant).strftime("%d/%m/%Y")
     _fn_act_str = pd.Timestamp(_fn_act).strftime("%d/%m/%Y")
 
-    # Cambios de precio de góndola real: solo filas sin oferta en ambas semanas
+    # Cambios de precio de góndola real: por producto único (Producto + Cadena), sin promediar
+    _KEY = ["Producto", "Cadena"]
     _gond_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                 .groupby(["SKU_canonico", "Cadena"])["Precio"]
-                 .mean().reset_index().rename(columns={"Precio": "p_ant"}))
+                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
+                 .rename(columns={"Precio": "p_ant"}))
     _gond_act = (df_full[(df_full["Fecha"] == _fn_act) & (~df_full["En_oferta"])]
-                 .groupby(["SKU_canonico", "Cadena"])["Precio"]
-                 .mean().reset_index().rename(columns={"Precio": "p_act"}))
+                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
+                 .rename(columns={"Precio": "p_act"}))
 
-    _cambios = (_gond_ant.merge(_gond_act, on=["SKU_canonico", "Cadena"])
+    _cambios = (_gond_ant.merge(_gond_act, on=_KEY + ["Marca_raw"])
                 .assign(delta=lambda d: d["p_act"] - d["p_ant"],
                         delta_pct=lambda d: ((d["p_act"] / d["p_ant"]) - 1) * 100)
                 .query("delta != 0")
@@ -747,15 +748,15 @@ if len(_notif_fechas) >= 2:
     _subas = _cambios[_cambios["delta"] > 0].sort_values("delta_pct", ascending=False)
     _bajas = _cambios[_cambios["delta"] < 0].sort_values("delta_pct")
 
-    # Ofertas nuevas: productos sin oferta la semana pasada, con oferta esta semana
+    # Ofertas nuevas: productos únicos (Producto + Cadena) sin oferta antes, con oferta ahora
     _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                   [["SKU_canonico", "Cadena"]].drop_duplicates())
+                   [_KEY].drop_duplicates())
     _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
-                   .groupby(["SKU_canonico", "Cadena"])
-                   .agg(p_gond=("Precio", "mean"), p_of=("Precio_oferta", "mean"),
-                        desc=("Descuento_pct", "mean"))
-                   .reset_index())
-    _nuevas_of = _con_of_act.merge(_sin_of_ant, on=["SKU_canonico", "Cadena"], how="inner")
+                   .drop_duplicates(subset=_KEY)
+                   [_KEY + ["Precio", "Precio_oferta", "Descuento_pct"]]
+                   .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",
+                                    "Descuento_pct": "desc"}))
+    _nuevas_of = _con_of_act.merge(_sin_of_ant, on=_KEY, how="inner")
 
     _total    = len(_cambios)
     _total_of = len(_nuevas_of)
@@ -799,7 +800,7 @@ if len(_notif_fechas) >= 2:
                 if _subas.empty:
                     st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna suba.</span>", unsafe_allow_html=True)
                 for _, r in _subas.iterrows():
-                    st.markdown(_fila(r["SKU_canonico"], r["Cadena"], "▲",
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▲",
                                       f"{r['delta_pct']:+.1f}%",
                                       r["p_ant"], r["p_act"], "#DC2626"),
                                 unsafe_allow_html=True)
@@ -808,7 +809,7 @@ if len(_notif_fechas) >= 2:
                 if _bajas.empty:
                     st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna baja.</span>", unsafe_allow_html=True)
                 for _, r in _bajas.iterrows():
-                    st.markdown(_fila(r["SKU_canonico"], r["Cadena"], "▼",
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
                                       f"{r['delta_pct']:+.1f}%",
                                       r["p_ant"], r["p_act"], "#16A34A"),
                                 unsafe_allow_html=True)
@@ -817,7 +818,7 @@ if len(_notif_fechas) >= 2:
                 if _nuevas_of.empty:
                     st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna oferta nueva.</span>", unsafe_allow_html=True)
                 for _, r in _nuevas_of.sort_values("desc", ascending=False).iterrows():
-                    st.markdown(_fila(r["SKU_canonico"], r["Cadena"], "▼",
+                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
                                       f"{r['desc']:.0f}% dto.",
                                       r["p_gond"], r["p_of"], "#B45309"),
                                 unsafe_allow_html=True)
