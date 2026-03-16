@@ -775,7 +775,7 @@ if len(_notif_fechas) >= 2:
         return (
             f"<div style='padding:5px 0;border-bottom:1px solid #E5E7EB'>"
             f"<span style='font-size:0.82rem;color:#111827'>"
-            f"<b>{sku[:50]}</b><br>"
+            f"<b style='word-break:break-word'>{sku}</b><br>"
             f"<span style='color:#6B7280'>{cadena}</span>&nbsp;&nbsp;"
             f"<span style='color:{color_flecha}'>{flecha} {pct_str}</span>"
             f"&nbsp;&nbsp;${p_de:,.0f} → <b>${p_a:,.0f}</b>"
@@ -957,8 +957,7 @@ with tab1:
                                 border-left:4px solid {_clr1}">
                       <div style="flex:1;min-width:0">
                         <div style="font-size:0.77rem;font-weight:700;color:#111827;
-                                    white-space:nowrap;overflow:hidden;
-                                    text-overflow:ellipsis">{_c1['sku']}</div>
+                                    word-break:break-word">{_c1['sku']}</div>
                         <div style="font-size:0.69rem;color:#6B7280">{_c1['cadena']}</div>
                       </div>
                       <div style="text-align:right;white-space:nowrap;flex-shrink:0">
@@ -2540,25 +2539,25 @@ with tab8:
     with _c1a:
         if _b250 is not None:
             _insight_card("🏆", "Más barato · 250 ml",
-                _b250["SKU_canonico"][:40],
+                _b250["SKU_canonico"],
                 f"Góndola ${_b250['precio_gond']:,.0f} · ${_b250['pl']:,.0f}/L · {int(_b250['n'])} cadena(s)",
                 "#16A34A")
     with _c1b:
         if _c250 is not None:
             _insight_card("💎", "Más caro · 250 ml",
-                _c250["SKU_canonico"][:40],
+                _c250["SKU_canonico"],
                 f"Góndola ${_c250['precio_gond']:,.0f} · ${_c250['pl']:,.0f}/L · {int(_c250['n'])} cadena(s)",
                 "#7C3AED")
     with _c1c:
         if _b500 is not None:
             _insight_card("🏆", "Más barato · 500 ml",
-                _b500["SKU_canonico"][:40],
+                _b500["SKU_canonico"],
                 f"Góndola ${_b500['precio_gond']:,.0f} · ${_b500['pl']:,.0f}/L · {int(_b500['n'])} cadena(s)",
                 "#16A34A")
     with _c1d:
         if _c500 is not None:
             _insight_card("💎", "Más caro · 500 ml",
-                _c500["SKU_canonico"][:40],
+                _c500["SKU_canonico"],
                 f"Góndola ${_c500['precio_gond']:,.0f} · ${_c500['pl']:,.0f}/L · {int(_c500['n'])} cadena(s)",
                 "#7C3AED")
 
