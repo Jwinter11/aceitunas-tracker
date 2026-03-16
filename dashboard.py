@@ -242,6 +242,68 @@ html,body,[class*="css"],.stApp{font-family:'Inter',sans-serif!important}
 .stTabs [aria-selected="true"]{color:#0F3460!important;background:#EEF2FF!important}
 .stTabs [data-baseweb="tab-panel"]{background:#fff;border-radius:0 0 14px 14px;
     padding:1.5rem 1.6rem;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+
+/* ══════════════════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Layout general */
+    .block-container{
+        padding:0.6rem 0.6rem 2rem!important;
+        max-width:100%!important;
+    }
+    /* Header compacto */
+    .main-header{
+        padding:1rem 1.2rem!important;
+        flex-direction:column!important;
+        gap:0.5rem!important;
+        border-radius:10px!important;
+    }
+    .header-left h1{font-size:1.2rem!important}
+    .header-left p{font-size:0.7rem!important}
+    .header-right{display:none!important}
+    /* Tabs: scroll horizontal */
+    .stTabs [data-baseweb="tab-list"]{
+        overflow-x:auto!important;
+        flex-wrap:nowrap!important;
+        -webkit-overflow-scrolling:touch!important;
+        scrollbar-width:none!important;
+    }
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
+    .stTabs [data-baseweb="tab"]{
+        font-size:0.72rem!important;
+        padding:0.4rem 0.7rem!important;
+        white-space:nowrap!important;
+    }
+    .stTabs [data-baseweb="tab-panel"]{
+        padding:0.8rem 0.7rem!important;
+    }
+    /* Columnas → apiladas */
+    [data-testid="stHorizontalBlock"]{
+        flex-wrap:wrap!important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"]{
+        min-width:100%!important;
+        flex:1 1 100%!important;
+    }
+    /* Métricas KPI más chicas */
+    [data-testid="stMetric"]{padding:0.5rem!important}
+    [data-testid="stMetricValue"]{font-size:1.3rem!important}
+    [data-testid="stMetricLabel"]{font-size:0.65rem!important}
+    /* Gráficos: altura reducida */
+    .js-plotly-plot{max-height:320px!important}
+    /* Sidebar */
+    [data-testid="stSidebar"]{width:85vw!important;max-width:85vw!important}
+    /* Texto */
+    .chart-title{font-size:0.85rem!important}
+    .chart-note{font-size:0.7rem!important}
+    /* Dataframes con scroll */
+    [data-testid="stDataFrame"]{overflow-x:auto!important}
+}
+@media (max-width: 480px) {
+    .block-container{padding:0.4rem 0.4rem 2rem!important}
+    .stTabs [data-baseweb="tab"]{font-size:0.65rem!important;padding:0.35rem 0.5rem!important}
+}
 </style>
 """, unsafe_allow_html=True)
 
