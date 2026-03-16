@@ -150,7 +150,7 @@ def _check_password():
         pwd = st.text_input("Contraseña", type="password", label_visibility="collapsed",
                             placeholder="Contraseña…")
         if st.button("Entrar", use_container_width=True, type="primary"):
-            correct = st.secrets.get("PASSWORD", "aceite2026")
+            correct = st.secrets.get("PASSWORD", "LaToscana2026")
             if pwd == correct:
                 st.session_state["_pwd_ok"] = True
                 st.rerun()
