@@ -704,7 +704,7 @@ ahorro_prom  = (df_of["Precio"] - df_of["Precio_oferta"]).mean() if not df_of.em
 
 c1,c2,c3,c4,c5,c6 = st.columns(6)
 kpis = [
-    ("",       "Productos (góndola)", f"{len(dff):,}",            f"{dff['Cadena'].nunique()} cadenas"),
+    ("",       "Productos únicos",    f"{dff['SKU_canonico'].nunique():,}", f"{dff['Cadena'].nunique()} cadenas"),
     ("green",  "Precio prom. góndola",f"${precio_prom:,.0f}",     "precio sin descuento"),
     ("orange", "Precio/litro prom.",  f"${pl_prom:,.0f}" if pl_prom else "—", "promedio por litro"),
     ("purple", "Cadena más barata",   cadena_barata,               "menor precio/litro"),
