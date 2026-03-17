@@ -391,8 +391,12 @@ def _marca(nombre: str, guardada) -> str:
     return "Otras"
 
 # ── Carga de datos ────────────────────────────────────────────────────────
-@st.cache_data(ttl=120)
-def cargar_datos() -> pd.DataFrame:
+def _historial_mtime():
+    p = DIRECTORIO / "historial_precios.json"
+    return p.stat().st_mtime if p.exists() else 0
+
+@st.cache_data(ttl=3600, hash_funcs={})
+def cargar_datos(_mtime=None) -> pd.DataFrame:
     path = DIRECTORIO / "historial_precios.json"
     if not path.exists():
         return pd.DataFrame()
@@ -432,7 +436,7 @@ def cargar_datos() -> pd.DataFrame:
         )
     return df
 
-df_full = cargar_datos()
+df_full = cargar_datos(_mtime=_historial_mtime())
 if df_full.empty:
     st.error("⚠️ Sin datos. Ejecutá primero: **python scraper.py**")
     st.stop()
