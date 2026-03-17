@@ -370,6 +370,15 @@ def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
         "?query=aceite+oliva&count=50&map=ft&page={page}"
     )
 
+    # Obtener cookies de sesión visitando la home — activa tablas de precios
+    # (promotions tipo "Fin de Semana" sólo se reflejan en spotPrice con sesión)
+    session = requests.Session()
+    session.headers.update(HEADERS_HTTP)
+    try:
+        session.get(base_url, timeout=15, allow_redirects=True)
+    except Exception:
+        pass  # Si falla, igual intentamos sin cookies
+
     productos = []
     vistos = set()
     pagina = 1
@@ -377,7 +386,7 @@ def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
     while True:
         url = BASE_IS.format(page=pagina)
         try:
-            resp = requests.get(url, headers=HEADERS_HTTP, timeout=20)
+            resp = session.get(url, timeout=20)
             if resp.status_code not in (200, 206):
                 print(f"  [{supermercado}] HTTP {resp.status_code} en página {pagina}")
                 break
