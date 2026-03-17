@@ -3572,91 +3572,91 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite Natura Oliva Suave Bivarietal - 500 Ml",
           "ml": 500,
-          "precio": 15250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12962.5,
+          "precio_sin_dto": 15250.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 30500
+          "precio_litro": 25925
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite Oliva Extra Virgen Intenso Cocinero 500 Ml",
           "ml": 500,
-          "precio": 14700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12495.0,
+          "precio_sin_dto": 14700.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 29400
+          "precio_litro": 24990
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Clásico 500 Ml",
           "ml": 500,
-          "precio": 19850.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16872.5,
+          "precio_sin_dto": 19850.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 39700
+          "precio_litro": 33745
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X1l",
           "ml": 1000,
-          "precio": 28050.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 23842.5,
+          "precio_sin_dto": 28050.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 28050
+          "precio_litro": 23842
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Cocinero Puro X500cc",
           "ml": 500,
-          "precio": 12450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10582.5,
+          "precio_sin_dto": 12450.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 24900
+          "precio_litro": 21165
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Virgen 500 Ml Cuisine And Co",
           "ml": 500,
-          "precio": 13120.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 8528.0,
+          "precio_sin_dto": 13120.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 26240
+          "precio_litro": 17056
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite Oliva Extra Virgen Suave Cocinero 500 Ml",
           "ml": 500,
-          "precio": 14700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12495.0,
+          "precio_sin_dto": 14700.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 29400
+          "precio_litro": 24990
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Virgen Extra X 500 Gr Laur",
           "ml": 500,
-          "precio": 15400.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 13090.0,
+          "precio_sin_dto": 15400.0,
+          "en_oferta": true,
           "marca": "Laur",
-          "precio_litro": 30800
+          "precio_litro": 26180
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Arbequina 500 Ml",
           "ml": 500,
-          "precio": 20700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17595.0,
+          "precio_sin_dto": 20700.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 41400
+          "precio_litro": 35190
         },
         {
           "supermercado": "Jumbo",
@@ -3672,31 +3672,31 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite Natura Oliva Andino 500 Cc",
           "ml": 500,
-          "precio": 18650.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 15852.5,
+          "precio_sin_dto": 18650.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 37300
+          "precio_litro": 31705
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Cocinero Puro X1l",
           "ml": 1000,
-          "precio": 23550.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 20017.5,
+          "precio_sin_dto": 23550.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 23550
+          "precio_litro": 20018
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen Mediterraneo Oliovita 500 Ml",
           "ml": 500,
-          "precio": 21250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 18062.5,
+          "precio_sin_dto": 21250.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 42500
+          "precio_litro": 36125
         },
         {
           "supermercado": "Jumbo",
@@ -3732,121 +3732,121 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen-extra Virgen-bot-gr.-500",
           "ml": 500,
-          "precio": 18450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 15682.5,
+          "precio_sin_dto": 18450.0,
+          "en_oferta": true,
           "marca": "Otra",
-          "precio_litro": 36900
+          "precio_litro": 31365
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen X 500 Ml Pisi",
           "ml": 500,
-          "precio": 16600.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14110.0,
+          "precio_sin_dto": 16600.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 33200
+          "precio_litro": 28220
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Clásico 500 Ml",
           "ml": 500,
-          "precio": 17050.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14492.5,
+          "precio_sin_dto": 17050.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 34100
+          "precio_litro": 28985
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva 2 Lts Pisi",
           "ml": 2000,
-          "precio": 42950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 36507.5,
+          "precio_sin_dto": 42950.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 21475
+          "precio_litro": 18254
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Virgen Nucete Lata 500 Ml",
           "ml": 500,
-          "precio": 17050.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14492.5,
+          "precio_sin_dto": 17050.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 34100
+          "precio_litro": 28985
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X500cc",
           "ml": 500,
-          "precio": 14700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12495.0,
+          "precio_sin_dto": 14700.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 29400
+          "precio_litro": 24990
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Oliovita Changlot 500 Ml",
           "ml": 500,
-          "precio": 20350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17297.5,
+          "precio_sin_dto": 20350.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 40700
+          "precio_litro": 34595
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Clásico Oliovita 250 Ml",
           "ml": 250,
-          "precio": 12450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10582.5,
+          "precio_sin_dto": 12450.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 49800
+          "precio_litro": 42330
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen 500ml Olitalia",
           "ml": 500,
-          "precio": 17450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14832.5,
+          "precio_sin_dto": 17450.0,
+          "en_oferta": true,
           "marca": "Olitalia",
-          "precio_litro": 34900
+          "precio_litro": 29665
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva La Española Extra Virgen 500 Ml",
           "ml": 500,
-          "precio": 22400.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 19040.0,
+          "precio_sin_dto": 22400.0,
+          "en_oferta": true,
           "marca": "La Española",
-          "precio_litro": 44800
+          "precio_litro": 38080
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 16590.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10783.5,
+          "precio_sin_dto": 16590.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 33180
+          "precio_litro": 21567
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Oliovita 1lt",
           "ml": 1000,
-          "precio": 45700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 38845.0,
+          "precio_sin_dto": 45700.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 45700
+          "precio_litro": 38845
         },
         {
           "supermercado": "Jumbo",
@@ -3872,11 +3872,11 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite Natura Oliva Fuerte Trivar 500 Cc",
           "ml": 500,
-          "precio": 15250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12962.5,
+          "precio_sin_dto": 15250.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 30500
+          "precio_litro": 25925
         },
         {
           "supermercado": "Jumbo",
@@ -3932,11 +3932,11 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen 1 Lts Cuisine & Co",
           "ml": 1000,
-          "precio": 40520.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 26338.0,
+          "precio_sin_dto": 40520.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 40520
+          "precio_litro": 26338
         },
         {
           "supermercado": "Jumbo",
@@ -3980,16 +3980,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
-          "ml": 500,
-          "precio": 18930.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Cousine & Co",
-          "precio_litro": 37860
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Colavita Extra Virgen 250 Ml.",
           "ml": 250,
           "precio": 20450.0,
@@ -4002,31 +3992,41 @@
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen 250 Ml Cuisine & Co",
           "ml": 250,
-          "precio": 11800.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 7670.0,
+          "precio_sin_dto": 11800.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 47200
+          "precio_litro": 30680
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
+          "ml": 500,
+          "precio": 12304.5,
+          "precio_sin_dto": 18930.0,
+          "en_oferta": true,
+          "marca": "Cousine & Co",
+          "precio_litro": 24609
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Organico 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 18250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11862.5,
+          "precio_sin_dto": 18250.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 36500
+          "precio_litro": 23725
         },
         {
           "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
           "ml": 250,
-          "precio": 10800.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 9180.0,
+          "precio_sin_dto": 10800.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 43200
+          "precio_litro": 36720
         },
         {
           "supermercado": "Jumbo",
@@ -4080,16 +4080,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite De Oliva Organico 250 Ml Cuisine & Co",
-          "ml": 250,
-          "precio": 13140.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Cousine & Co",
-          "precio_litro": 52560
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Yancanello Extra Virgen 500 Ml",
           "ml": 500,
           "precio": 29600.0,
@@ -4097,6 +4087,16 @@
           "en_oferta": false,
           "marca": "Yancanello",
           "precio_litro": 59200
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite De Oliva Organico 250 Ml Cuisine & Co",
+          "ml": 250,
+          "precio": 8541.0,
+          "precio_sin_dto": 13140.0,
+          "en_oferta": true,
+          "marca": "Cousine & Co",
+          "precio_litro": 34164
         },
         {
           "supermercado": "Jumbo",
@@ -4132,151 +4132,151 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Clásico 500 Ml",
           "ml": 500,
-          "precio": 20350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17297.5,
+          "precio_sin_dto": 20350.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 40700
+          "precio_litro": 34595
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite Oliva Extra Virgen Suave Cocinero 500 Ml",
           "ml": 500,
-          "precio": 14750.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12537.5,
+          "precio_sin_dto": 14750.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 29500
+          "precio_litro": 25075
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X1l",
           "ml": 1000,
-          "precio": 28100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 23885.0,
+          "precio_sin_dto": 28100.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 28100
+          "precio_litro": 23885
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Mediterráneo Oliovita 500 Ml",
           "ml": 500,
-          "precio": 13911.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11824.35,
+          "precio_sin_dto": 13911.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 27822
+          "precio_litro": 23649
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Cocinero Puro X500cc",
           "ml": 500,
-          "precio": 12800.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10880.0,
+          "precio_sin_dto": 12800.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 25600
+          "precio_litro": 21760
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen 2000 Ml Nucete",
           "ml": 2000,
-          "precio": 48950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 41607.5,
+          "precio_sin_dto": 48950.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 24475
+          "precio_litro": 20804
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X500cc",
           "ml": 500,
-          "precio": 14750.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12537.5,
+          "precio_sin_dto": 14750.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 29500
+          "precio_litro": 25075
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Clásico 500 Ml",
           "ml": 500,
-          "precio": 17350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14747.5,
+          "precio_sin_dto": 17350.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 34700
+          "precio_litro": 29495
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen Mediterraneo Oliovita 500 Ml",
           "ml": 500,
-          "precio": 21650.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 18402.5,
+          "precio_sin_dto": 21650.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 43300
+          "precio_litro": 36805
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Suave 500 Ml",
           "ml": 500,
-          "precio": 15700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 13345.0,
+          "precio_sin_dto": 15700.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 31400
+          "precio_litro": 26690
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite Natura Oliva Suave Bivarietal - 500 Ml",
           "ml": 500,
-          "precio": 15650.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 13302.5,
+          "precio_sin_dto": 15650.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 31300
+          "precio_litro": 26605
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Arbequina 500 Ml",
           "ml": 500,
-          "precio": 21100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17935.0,
+          "precio_sin_dto": 21100.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 42200
+          "precio_litro": 35870
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Clasica Oliovita 1 L",
           "ml": 1000,
-          "precio": 43000.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 36550.0,
+          "precio_sin_dto": 43000.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 43000
+          "precio_litro": 36550
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite Natura Oliva Andino 500 Cc",
           "ml": 500,
-          "precio": 19000.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16150.0,
+          "precio_sin_dto": 19000.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 38000
+          "precio_litro": 32300
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Cocinero Puro X1l",
           "ml": 1000,
-          "precio": 23750.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 20187.5,
+          "precio_sin_dto": 23750.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 23750
+          "precio_litro": 20188
         },
         {
           "supermercado": "Disco",
@@ -4292,31 +4292,31 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Virgen 500 Ml Cuisine And Co",
           "ml": 500,
-          "precio": 13500.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 8775.0,
+          "precio_sin_dto": 13500.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 27000
+          "precio_litro": 17550
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Clásico Oliovita 250 Ml",
           "ml": 250,
-          "precio": 12800.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10880.0,
+          "precio_sin_dto": 12800.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 51200
+          "precio_litro": 43520
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen-extra Virgen-bot-gr.-500",
           "ml": 500,
-          "precio": 19000.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16150.0,
+          "precio_sin_dto": 19000.0,
+          "en_oferta": true,
           "marca": "Otra",
-          "precio_litro": 38000
+          "precio_litro": 32300
         },
         {
           "supermercado": "Disco",
@@ -4342,21 +4342,21 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 19480.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12662.0,
+          "precio_sin_dto": 19480.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 38960
+          "precio_litro": 25324
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva 2 Lts Pisi",
           "ml": 2000,
-          "precio": 44200.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 37570.0,
+          "precio_sin_dto": 44200.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 22100
+          "precio_litro": 18785
         },
         {
           "supermercado": "Disco",
@@ -4402,51 +4402,51 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Intenso 500 Ml",
           "ml": 500,
-          "precio": 17250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14662.5,
+          "precio_sin_dto": 17250.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 34500
+          "precio_litro": 29325
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva La Española Extra Virgen 500 Ml",
           "ml": 500,
-          "precio": 23200.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 19720.0,
+          "precio_sin_dto": 23200.0,
+          "en_oferta": true,
           "marca": "La Española",
-          "precio_litro": 46400
+          "precio_litro": 39440
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 17070.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11095.5,
+          "precio_sin_dto": 17070.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 34140
+          "precio_litro": 22191
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva La Toscana Extra Virgen 500 Ml",
           "ml": 500,
-          "precio": 19400.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16490.0,
+          "precio_sin_dto": 19400.0,
+          "en_oferta": true,
           "marca": "La Toscana",
-          "precio_litro": 38800
+          "precio_litro": 32980
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Oliovita 1lt",
           "ml": 1000,
-          "precio": 46550.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 39567.5,
+          "precio_sin_dto": 46550.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 46550
+          "precio_litro": 39568
         },
         {
           "supermercado": "Disco",
@@ -4482,21 +4482,21 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen 250 Ml Cuisine & Co",
           "ml": 250,
-          "precio": 12290.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 7988.5,
+          "precio_sin_dto": 12290.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 49160
+          "precio_litro": 31954
         },
         {
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen 500ml Olitalia",
           "ml": 500,
-          "precio": 17350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14747.5,
+          "precio_sin_dto": 17350.0,
+          "en_oferta": true,
           "marca": "Olitalia",
-          "precio_litro": 34700
+          "precio_litro": 29495
         },
         {
           "supermercado": "Disco",
@@ -4530,16 +4530,6 @@
         },
         {
           "supermercado": "Disco",
-          "nombre": "Aceite De Oliva Organico 250 Ml Cuisine & Co",
-          "ml": 250,
-          "precio": 14020.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Cousine & Co",
-          "precio_litro": 56080
-        },
-        {
-          "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen Pisi Premium",
           "ml": null,
           "precio": 22600.0,
@@ -4560,6 +4550,16 @@
         },
         {
           "supermercado": "Disco",
+          "nombre": "Aceite De Oliva Organico 250 Ml Cuisine & Co",
+          "ml": 250,
+          "precio": 9113.0,
+          "precio_sin_dto": 14020.0,
+          "en_oferta": true,
+          "marca": "Cousine & Co",
+          "precio_litro": 36452
+        },
+        {
+          "supermercado": "Disco",
           "nombre": "Aceite De Oliva Monini Extra Virgen Delicato 500 Ml",
           "ml": 500,
           "precio": 24350.0,
@@ -4572,11 +4572,11 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
           "ml": 250,
-          "precio": 11100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 9435.0,
+          "precio_sin_dto": 11100.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 44400
+          "precio_litro": 37740
         },
         {
           "supermercado": "Disco",
@@ -4622,11 +4622,11 @@
           "supermercado": "Disco",
           "nombre": "Aceite De Oliva Extra Virgen Cuisine And Co 1 L",
           "ml": 1000,
-          "precio": 33340.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 21671.0,
+          "precio_sin_dto": 33340.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 33340
+          "precio_litro": 21671
         },
         {
           "supermercado": "Disco",
@@ -4732,161 +4732,161 @@
           "supermercado": "Vea",
           "nombre": "Aceite Oliva Extra Virgen Intenso Cocinero 500 Ml",
           "ml": 500,
-          "precio": 14100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11985.0,
+          "precio_sin_dto": 14100.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 28200
+          "precio_litro": 23970
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite Oliva Extra Virgen Suave Cocinero 500 Ml",
           "ml": 500,
-          "precio": 14100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11985.0,
+          "precio_sin_dto": 14100.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 28200
+          "precio_litro": 23970
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Virgen 500 Ml Cuisine And Co",
           "ml": 500,
-          "precio": 12730.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 8274.5,
+          "precio_sin_dto": 12730.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 25460
+          "precio_litro": 16549
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen X 500 Ml Pisi",
           "ml": 500,
-          "precio": 16100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 13685.0,
+          "precio_sin_dto": 16100.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 32200
+          "precio_litro": 27370
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Clásico 500 Ml",
           "ml": 500,
-          "precio": 19450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16532.5,
+          "precio_sin_dto": 19450.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 38900
+          "precio_litro": 33065
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Cocinero Puro X500cc",
           "ml": 500,
-          "precio": 12050.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10242.5,
+          "precio_sin_dto": 12050.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 24100
+          "precio_litro": 20485
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Mediterráneo Oliovita 500 Ml",
           "ml": 500,
-          "precio": 14150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12027.5,
+          "precio_sin_dto": 14150.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 28300
+          "precio_litro": 24055
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite Natura Oliva Andino 500 Cc",
           "ml": 500,
-          "precio": 18150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 15427.5,
+          "precio_sin_dto": 18150.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 36300
+          "precio_litro": 30855
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Virgen Nucete Lata 500 Ml",
           "ml": 500,
-          "precio": 16550.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 14067.5,
+          "precio_sin_dto": 16550.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 33100
+          "precio_litro": 28135
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen 2000 Ml Nucete",
           "ml": 2000,
-          "precio": 46700.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 39695.0,
+          "precio_sin_dto": 46700.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 23350
+          "precio_litro": 19848
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X500cc",
           "ml": 500,
-          "precio": 14100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11985.0,
+          "precio_sin_dto": 14100.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 28200
+          "precio_litro": 23970
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite Natura Oliva Suave Bivarietal - 500 Ml",
           "ml": 500,
-          "precio": 14500.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12325.0,
+          "precio_sin_dto": 14500.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 29000
+          "precio_litro": 24650
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Suave 500 Ml",
           "ml": 500,
-          "precio": 14900.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12665.0,
+          "precio_sin_dto": 14900.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 29800
+          "precio_litro": 25330
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Cocinero Extra Virgen X1l",
           "ml": 1000,
-          "precio": 26900.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 22865.0,
+          "precio_sin_dto": 26900.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 26900
+          "precio_litro": 22865
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva 2 Lts Pisi",
           "ml": 2000,
-          "precio": 40900.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 34765.0,
+          "precio_sin_dto": 40900.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 20450
+          "precio_litro": 17382
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 16100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 10465.0,
+          "precio_sin_dto": 16100.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 32200
+          "precio_litro": 20930
         },
         {
           "supermercado": "Vea",
@@ -4912,31 +4912,21 @@
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen 250 Ml Cuisine & Co",
           "ml": 250,
-          "precio": 11570.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 7520.5,
+          "precio_sin_dto": 11570.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 46280
+          "precio_litro": 30082
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite Natura Oliva Fuerte Trivar 500 Cc",
           "ml": 500,
-          "precio": 14500.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 12325.0,
+          "precio_sin_dto": 14500.0,
+          "en_oferta": true,
           "marca": "Natura",
-          "precio_litro": 29000
-        },
-        {
-          "supermercado": "Vea",
-          "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
-          "ml": 500,
-          "precio": 18370.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Cousine & Co",
-          "precio_litro": 36740
+          "precio_litro": 24650
         },
         {
           "supermercado": "Vea",
@@ -4950,63 +4940,73 @@
         },
         {
           "supermercado": "Vea",
+          "nombre": "Aceite De Oliva Extra Virgen 500 Ml Cuisine & Co",
+          "ml": 500,
+          "precio": 11940.5,
+          "precio_sin_dto": 18370.0,
+          "en_oferta": true,
+          "marca": "Cousine & Co",
+          "precio_litro": 23881
+        },
+        {
+          "supermercado": "Vea",
           "nombre": "Aceite De Oliva Clasica Oliovita 1 L",
           "ml": 1000,
-          "precio": 40300.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 34255.0,
+          "precio_sin_dto": 40300.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 40300
+          "precio_litro": 34255
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen Mediterraneo Oliovita 500 Ml",
           "ml": 500,
-          "precio": 20650.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17552.5,
+          "precio_sin_dto": 20650.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 41300
+          "precio_litro": 35105
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
           "ml": 250,
-          "precio": 10450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 8882.5,
+          "precio_sin_dto": 10450.0,
+          "en_oferta": true,
           "marca": "Pisi",
-          "precio_litro": 41800
+          "precio_litro": 35530
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Cocinero Puro X1l",
           "ml": 1000,
-          "precio": 22850.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 19422.5,
+          "precio_sin_dto": 22850.0,
+          "en_oferta": true,
           "marca": "Cocinero",
-          "precio_litro": 22850
+          "precio_litro": 19422
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Intenso 500 Ml",
           "ml": 500,
-          "precio": 16450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 13982.5,
+          "precio_sin_dto": 16450.0,
+          "en_oferta": true,
           "marca": "Nucete",
-          "precio_litro": 32900
+          "precio_litro": 27965
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva La Toscana Extra Virgen 500 Ml",
           "ml": 500,
-          "precio": 18300.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 15555.0,
+          "precio_sin_dto": 18300.0,
+          "en_oferta": true,
           "marca": "La Toscana",
-          "precio_litro": 36600
+          "precio_litro": 31110
         },
         {
           "supermercado": "Vea",
@@ -5022,21 +5022,21 @@
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen Cuisine And Co 1 L",
           "ml": 1000,
-          "precio": 30350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 19727.5,
+          "precio_sin_dto": 30350.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 30350
+          "precio_litro": 19728
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Oliovita Changlot 500 Ml",
           "ml": 500,
-          "precio": 19800.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 16830.0,
+          "precio_sin_dto": 19800.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 39600
+          "precio_litro": 33660
         },
         {
           "supermercado": "Vea",
@@ -5052,11 +5052,11 @@
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Arbequina 500 Ml",
           "ml": 500,
-          "precio": 20100.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 17085.0,
+          "precio_sin_dto": 20100.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 40200
+          "precio_litro": 34170
         },
         {
           "supermercado": "Vea",
@@ -5072,41 +5072,41 @@
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Organico 250 Ml Cuisine & Co",
           "ml": 250,
-          "precio": 12750.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 8287.5,
+          "precio_sin_dto": 12750.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 51000
+          "precio_litro": 33150
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Oliovita 1lt",
           "ml": 1000,
-          "precio": 44450.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 37782.5,
+          "precio_sin_dto": 44450.0,
+          "en_oferta": true,
           "marca": "Oliovita",
-          "precio_litro": 44450
+          "precio_litro": 37782
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Organico 500 Ml Cuisine & Co",
           "ml": 500,
-          "precio": 17350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 11277.5,
+          "precio_sin_dto": 17350.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 34700
+          "precio_litro": 22555
         },
         {
           "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen 1 Lts Cuisine & Co",
           "ml": 1000,
-          "precio": 39340.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
+          "precio": 25571.0,
+          "precio_sin_dto": 39340.0,
+          "en_oferta": true,
           "marca": "Cousine & Co",
-          "precio_litro": 39340
+          "precio_litro": 25571
         },
         {
           "supermercado": "Vea",
@@ -6567,136 +6567,6 @@
           "en_oferta": false,
           "marca": "La Toscana",
           "precio_litro": 37000
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite Oliva Extra Virgen Blend Suave Dv Catena x 500 cc.",
-          "ml": 500,
-          "precio": 27150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "DV Catena",
-          "precio_litro": 54300
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite Oliva Extra Virgen Blend Dv Catena x 500 cc.",
-          "ml": 500,
-          "precio": 27150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "DV Catena",
-          "precio_litro": 54300
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite Oliva Orgánico  La Anónima x 250 cc.",
-          "ml": 250,
-          "precio": 9400.0,
-          "precio_sin_dto": 11750.0,
-          "en_oferta": true,
-          "marca": "Anónima",
-          "precio_litro": 37600
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen Vidrio La Anónima x 500 cc.",
-          "ml": 500,
-          "precio": 12280.0,
-          "precio_sin_dto": 15350.0,
-          "en_oferta": true,
-          "marca": "Anónima",
-          "precio_litro": 24560
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen La Toscana Vidrio x 250 cc.",
-          "ml": 250,
-          "precio": 10250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "La Toscana",
-          "precio_litro": 41000
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite Oliva Ext Virgen Blend Robusto Dv Catena x 500 cc.",
-          "ml": 500,
-          "precio": 27150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "DV Catena",
-          "precio_litro": 54300
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Genovesa Vid Zuccardi x 500 cc.",
-          "ml": 500,
-          "precio": 29950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Familia Zuccardi",
-          "precio_litro": 59900
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen Intenso Lata Zuelo x 500 cc.",
-          "ml": 500,
-          "precio": 21350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Zuelo",
-          "precio_litro": 42700
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen Lata La Anónima x 500 cc.",
-          "ml": 500,
-          "precio": 14200.0,
-          "precio_sin_dto": 17750.0,
-          "en_oferta": true,
-          "marca": "Anónima",
-          "precio_litro": 28400
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen Vidrio La Anónima x 250 cc.",
-          "ml": 250,
-          "precio": 7520.0,
-          "precio_sin_dto": 9400.0,
-          "en_oferta": true,
-          "marca": "Anónima",
-          "precio_litro": 30080
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Extra Virgen Lata  La Anónima x 1 Lt.",
-          "ml": 1000,
-          "precio": 25280.0,
-          "precio_sin_dto": 31600.0,
-          "en_oferta": true,
-          "marca": "Anónima",
-          "precio_litro": 25280
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Picual Vidrio Zuccardi x 500 cc.",
-          "ml": 500,
-          "precio": 29950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Familia Zuccardi",
-          "precio_litro": 59900
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Coratina Vidrio Zuccardi x 500 cc.",
-          "ml": 500,
-          "precio": 29950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Familia Zuccardi",
-          "precio_litro": 59900
         }
       ]
     }
