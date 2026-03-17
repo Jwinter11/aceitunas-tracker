@@ -483,11 +483,13 @@ def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
 
         print(f"  [{supermercado}] página {pagina}: {nuevos} productos nuevos (total {len(productos)})")
 
-        # Cortar si la página vino vacía de aceite de oliva o ya no hay más
+        # Cortar solo cuando ya no hay más páginas según recordsFiltered
+        # (NO cortar por nuevos==0: una página puede no tener aceite de oliva
+        #  pero la siguiente sí puede tenerlo)
         total = data.get("recordsFiltered", 0)
-        if pagina * 50 >= total and total > 0:
+        if total > 0 and pagina * 50 >= total:
             break
-        if nuevos == 0 and pagina > 1:
+        if total == 0:
             break
         pagina += 1
 

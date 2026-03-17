@@ -7425,16 +7425,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite De Oliva Filippo Berio Extra Virgen 500 Ml",
-          "ml": 500,
-          "precio": 37950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Filippo Berio",
-          "precio_litro": 75900
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite Oliva Genovesa Zuccardi 250 Ml",
           "ml": 250,
           "precio": 16850.0,
@@ -7442,6 +7432,16 @@
           "en_oferta": false,
           "marca": "Familia Zuccardi",
           "precio_litro": 67400
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite De Oliva Filippo Berio Extra Virgen 500 Ml",
+          "ml": 500,
+          "precio": 37950.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "marca": "Filippo Berio",
+          "precio_litro": 75900
         },
         {
           "supermercado": "Jumbo",
@@ -7505,16 +7505,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
-          "ml": 250,
-          "precio": 9180.0,
-          "precio_sin_dto": 10800.0,
-          "en_oferta": true,
-          "marca": "Pisi",
-          "precio_litro": 36720
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Filippo Berio Extra Virgen 250 Ml",
           "ml": 250,
           "precio": 21150.0,
@@ -7522,6 +7512,16 @@
           "en_oferta": false,
           "marca": "Filippo Berio",
           "precio_litro": 84600
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
+          "ml": 250,
+          "precio": 9180.0,
+          "precio_sin_dto": 10800.0,
+          "en_oferta": true,
+          "marca": "Pisi",
+          "precio_litro": 36720
         },
         {
           "supermercado": "Jumbo",
@@ -8025,16 +8025,6 @@
         },
         {
           "supermercado": "Disco",
-          "nombre": "Aceite De Oliva Monini Extra Virgen Delicato 500 Ml",
-          "ml": 500,
-          "precio": 24350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Monini",
-          "precio_litro": 48700
-        },
-        {
-          "supermercado": "Disco",
           "nombre": "Aceite Oliva Picual Zuccardi 500 Ml",
           "ml": 500,
           "precio": 28850.0,
@@ -8042,6 +8032,16 @@
           "en_oferta": false,
           "marca": "Familia Zuccardi",
           "precio_litro": 57700
+        },
+        {
+          "supermercado": "Disco",
+          "nombre": "Aceite De Oliva Monini Extra Virgen Delicato 500 Ml",
+          "ml": 500,
+          "precio": 24350.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "marca": "Monini",
+          "precio_litro": 48700
         },
         {
           "supermercado": "Disco",
@@ -8125,16 +8125,6 @@
         },
         {
           "supermercado": "Disco",
-          "nombre": "Aceite De Oliva Extra Virgen Con Ají Picante La Toscana 250 Ml",
-          "ml": 250,
-          "precio": 14250.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "La Toscana",
-          "precio_litro": 57000
-        },
-        {
-          "supermercado": "Disco",
           "nombre": "Aceite De Oliva Filippo Berio Extra Virgen 500 Ml",
           "ml": 500,
           "precio": 37950.0,
@@ -8142,6 +8132,16 @@
           "en_oferta": false,
           "marca": "Filippo Berio",
           "precio_litro": 75900
+        },
+        {
+          "supermercado": "Disco",
+          "nombre": "Aceite De Oliva Extra Virgen Con Ají Picante La Toscana 250 Ml",
+          "ml": 250,
+          "precio": 14250.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "marca": "La Toscana",
+          "precio_litro": 57000
         },
         {
           "supermercado": "Disco",
@@ -8435,16 +8435,6 @@
         },
         {
           "supermercado": "Vea",
-          "nombre": "Aceite De Oliva Clasica Oliovita 1 L",
-          "ml": 1000,
-          "precio": 34255.0,
-          "precio_sin_dto": 40300.0,
-          "en_oferta": true,
-          "marca": "Oliovita",
-          "precio_litro": 34255
-        },
-        {
-          "supermercado": "Vea",
           "nombre": "Aceite De Oliva Extra Virgen Pisi   Bot 250 Cc.",
           "ml": 250,
           "precio": 8882.5,
@@ -8462,6 +8452,16 @@
           "en_oferta": true,
           "marca": "Oliovita",
           "precio_litro": 35105
+        },
+        {
+          "supermercado": "Vea",
+          "nombre": "Aceite De Oliva Clasica Oliovita 1 L",
+          "ml": 1000,
+          "precio": 34255.0,
+          "precio_sin_dto": 40300.0,
+          "en_oferta": true,
+          "marca": "Oliovita",
+          "precio_litro": 34255
         },
         {
           "supermercado": "Vea",
@@ -8505,16 +8505,6 @@
         },
         {
           "supermercado": "Vea",
-          "nombre": "Aceite De Oliva Oliovita Changlot 500 Ml",
-          "ml": 500,
-          "precio": 16830.0,
-          "precio_sin_dto": 19800.0,
-          "en_oferta": true,
-          "marca": "Oliovita",
-          "precio_litro": 33660
-        },
-        {
-          "supermercado": "Vea",
           "nombre": "Aceite De Oliva Zuelo Extra Virgen Clásico 500 Ml",
           "ml": 500,
           "precio": 21050.0,
@@ -8522,6 +8512,16 @@
           "en_oferta": false,
           "marca": "Zuelo",
           "precio_litro": 42100
+        },
+        {
+          "supermercado": "Vea",
+          "nombre": "Aceite De Oliva Oliovita Changlot 500 Ml",
+          "ml": 500,
+          "precio": 16830.0,
+          "precio_sin_dto": 19800.0,
+          "en_oferta": true,
+          "marca": "Oliovita",
+          "precio_litro": 33660
         },
         {
           "supermercado": "Vea",
@@ -10132,36 +10132,6 @@
           "en_oferta": true,
           "marca": "Anónima",
           "precio_litro": 25280
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Picual Vidrio Zuccardi x 500 cc.",
-          "ml": 500,
-          "precio": 29950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Familia Zuccardi",
-          "precio_litro": 59900
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Aceite de Oliva Coratina Vidrio Zuccardi x 500 cc.",
-          "ml": 500,
-          "precio": 29950.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Familia Zuccardi",
-          "precio_litro": 59900
-        },
-        {
-          "supermercado": "La Anonima",
-          "nombre": "Quesitos en Aceite de Oliva Familia Weiss x 100 g.",
-          "ml": 100,
-          "precio": 8900.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "marca": "Quesitos",
-          "precio_litro": 89000
         }
       ]
     }
