@@ -2334,7 +2334,7 @@ with tab7:
                 ("orange", _mm_kpi_lbl1,      f"${_mm_avg_marca:,.0f}", _mm_kpi_sub1),
                 ("",       _mm_kpi_lbl2,      f"${_mm_avg_merc:,.0f}",  _mm_kpi_sub2),
                 ("red" if _mm_prima > 0 else "green",
-                           "Prima vs mercado",
+                           "Precio vs mercado",
                            f"{_mm_prima:+.1f}%",
                            "más cara" if _mm_prima > 0 else "más barata"),
                 ("purple", "Presencia",       str(_mm_cadenas),         "cadenas donde está listada"),
