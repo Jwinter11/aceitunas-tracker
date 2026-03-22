@@ -436,36 +436,6 @@ def _marca(nombre: str, guardada) -> str:
             return w.strip(".,()-/&°")
     return "Otras"
 
-def _envase(nombre: str) -> str:
-    n = nombre.lower()
-    if "lata"     in n: return "Lata"
-    if "aerosol"  in n: return "Aerosol"
-    if "doypack"  in n: return "Doypack"
-    if "bandeja"  in n: return "Bandeja"
-    if "tetra"    in n: return "Tetra"
-    if " pet "    in n or n.endswith(" pet"): return "PET"
-    if "plastico" in n or "plástico" in n:   return "PET"
-    if "vidrio"   in n: return "Vidrio"
-    if "frasco"   in n: return "Frasco"
-    return "Botella"
-
-def _variedad(nombre: str) -> str:
-    n = nombre.lower()
-    if "extra virgen" in n or "extra-virgen" in n or "extravirgen" in n or "virgen extra" in n:
-        return "Extra Virgen"
-    if "orgánico" in n or "organico" in n: return "Orgánico"
-    if "suave"   in n: return "Suave"
-    if "intenso" in n: return "Intenso"
-    if "clásico" in n or "clasico" in n:   return "Clásico"
-    if "blend"   in n: return "Blend"
-    if "con ajo" in n: return "Con Ajo"
-    if "con limón" in n or "con limon" in n: return "Con Limón"
-    if "con albahaca" in n: return "Con Albahaca"
-    if "con ají" in n or "con aji" in n:   return "Con Ají"
-    if "picual"    in n: return "Picual"
-    if "arbequina" in n: return "Arbequina"
-    return "Extra Virgen"
-
 # ── Carga de datos ────────────────────────────────────────────────────────
 def _historial_mtime():
     db = DIRECTORIO / "precios.db"
@@ -542,8 +512,6 @@ def cargar_datos(_mtime=None) -> pd.DataFrame:
                 "Precio_oferta": int(round(precio)),
                 "Descuento_pct": desc,
                 "En_oferta":     bool(r["en_oferta"]),
-                "Envase":        _envase(r["nombre"]),
-                "Variedad":      _variedad(r["nombre"]),
                 "Producto_key":  pid or r["nombre"],
                 "Producto_url":  prod_url,
             })
@@ -579,8 +547,6 @@ def cargar_datos(_mtime=None) -> pd.DataFrame:
                     "Precio_oferta": int(round(precio)),
                     "Descuento_pct": desc,
                     "En_oferta":     bool(p.get("en_oferta", False)),
-                    "Envase":        _envase(p["nombre"]),
-                    "Variedad":      _variedad(p["nombre"]),
                     "Producto_key":  p.get("producto_id") or p["nombre"],
                     "Producto_url":  prod_url,
                 })
@@ -598,12 +564,6 @@ df_full = cargar_datos(_mtime=_historial_mtime())
 if df_full.empty:
     st.error("⚠️ Sin datos. Ejecutá primero: **python scraper.py**")
     st.stop()
-
-# Columnas derivadas: fallback por si el caché es de una versión anterior
-if "Envase" not in df_full.columns:
-    df_full["Envase"]   = df_full["Producto"].apply(_envase)
-if "Variedad" not in df_full.columns:
-    df_full["Variedad"] = df_full["Producto"].apply(_variedad)
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 def cc(c): return COLORS_CADENAS.get(c, "#6B7280")
@@ -932,31 +892,12 @@ def hbar(df_x, df_y, colores, textos, titulo_x, altura=320):
     )
     return fig
 
-def gram_filter(key, source=None, hide_label=False):
+def gram_filter(key, source=None):
     """Devuelve (dff_local, etiqueta) filtrado por gramaje con selectbox."""
     src = source if source is not None else dff
     opts = ["Todos los gramajes"] + [e for e in GRAMAJE_BUCKETS if src["Gramaje"].eq(e).any()]
-    lv = "collapsed" if hide_label else "visible"
-    sel  = st.selectbox("📦 Gramaje", opts, key=key, label_visibility=lv)
+    sel  = st.selectbox("📦 Gramaje", opts, key=key)
     out  = src if sel == "Todos los gramajes" else src[src["Gramaje"] == sel]
-    return out, sel
-
-def envase_filter(key, source=None, hide_label=False):
-    """Devuelve (dff_local, etiqueta) filtrado por tipo de envase."""
-    src  = source if source is not None else dff
-    opts = ["Todos los envases"] + sorted(src["Envase"].dropna().unique().tolist())
-    lv = "collapsed" if hide_label else "visible"
-    sel  = st.selectbox("🫙 Envase", opts, key=key, label_visibility=lv)
-    out  = src if sel == "Todos los envases" else src[src["Envase"] == sel]
-    return out, sel
-
-def variedad_filter(key, source=None, hide_label=False):
-    """Devuelve (dff_local, etiqueta) filtrado por variedad de aceite."""
-    src  = source if source is not None else dff
-    opts = ["Todas las variedades"] + sorted(src["Variedad"].dropna().unique().tolist())
-    lv = "collapsed" if hide_label else "visible"
-    sel  = st.selectbox("🌿 Variedad", opts, key=key, label_visibility=lv)
-    out  = src if sel == "Todas las variedades" else src[src["Variedad"] == sel]
     return out, sel
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1430,21 +1371,12 @@ with tab1:
 # TAB 2 · POR CADENA
 # ══════════════════════════════════════════════════════════════════════════
 with tab2:
-    _lbl = '<p style="font-size:0.7rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px">'
-    _fc2a, _fc2var, _fc2env, _fc2b = st.columns([2, 2, 2, 2])
+    _fc2a, _fc2b, _ = st.columns([2, 2, 3])
     with _fc2a:
-        st.markdown(_lbl + "📦 Gramaje</p>", unsafe_allow_html=True)
-        dff2, _ = gram_filter("gram_tab2", hide_label=True)
-    with _fc2var:
-        st.markdown(_lbl + "🌿 Variedad</p>", unsafe_allow_html=True)
-        dff2, _ = variedad_filter("var_tab2", dff2, hide_label=True)
-    with _fc2env:
-        st.markdown(_lbl + "🫙 Envase</p>", unsafe_allow_html=True)
-        dff2, _ = envase_filter("env_tab2", dff2, hide_label=True)
+        dff2, _ = gram_filter("gram_tab2")
     with _fc2b:
-        st.markdown(_lbl + "🏪 Cadena</p>", unsafe_allow_html=True)
         _cadenas2_opts = ["Todas las cadenas"] + sorted(dff2["Cadena"].unique().tolist())
-        _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2", label_visibility="collapsed")
+        _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2")
     if _cadena2_sel != "Todas las cadenas":
         dff2 = dff2[dff2["Cadena"] == _cadena2_sel].copy()
 
@@ -1541,21 +1473,12 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════
 with tab3:
     # Filtros en la misma fila para que ambos gráficos arranquen al mismo nivel
-    _lbl = '<p style="font-size:0.7rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px">'
-    _fc3a, _fc3var, _fc3env, _fc3b = st.columns([2, 2, 2, 2])
+    _fc3a, _fc3b, _ = st.columns([2, 2, 3])
     with _fc3a:
-        st.markdown(_lbl + "📦 Gramaje</p>", unsafe_allow_html=True)
-        dff3, _ = gram_filter("gram_tab3", hide_label=True)
-    with _fc3var:
-        st.markdown(_lbl + "🌿 Variedad</p>", unsafe_allow_html=True)
-        dff3, _ = variedad_filter("var_tab3", dff3, hide_label=True)
-    with _fc3env:
-        st.markdown(_lbl + "🫙 Envase</p>", unsafe_allow_html=True)
-        dff3, _ = envase_filter("env_tab3", dff3, hide_label=True)
+        dff3, _ = gram_filter("gram_tab3")
     with _fc3b:
-        st.markdown(_lbl + "🏪 Cadena</p>", unsafe_allow_html=True)
         cadenas_pie3 = ["Todas las cadenas"] + sorted(dff3["Cadena"].unique().tolist())
-        cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3", label_visibility="collapsed")
+        cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3")
 
     src_pie3 = dff3 if cadena_pie3 == "Todas las cadenas" else dff3[dff3["Cadena"]==cadena_pie3]
 
@@ -1630,11 +1553,9 @@ with tab4:
         st.info("📅 **Solo hay una semana cargada.** "
                 "Ejecutá `python scraper.py` la semana que viene para ver la evolución.")
 
-    _fc4a, _fc4env, _fc4b, _ = st.columns([2, 2, 2, 1])
+    _fc4a, _fc4b, _ = st.columns([2, 2, 3])
     with _fc4a:
         dff4, _ = gram_filter("gram_tab4")
-    with _fc4env:
-        dff4, _ = envase_filter("env_tab4", dff4)
     with _fc4b:
         _usar_real4 = st.checkbox("Mostrar en pesos reales (ajustado por inflación)",
                                    key="toggle_real_ev4", value=False)
@@ -1832,10 +1753,10 @@ with tab5:
         # Top 20 mejores descuentos
         with st.expander("Top 20 · Mejores descuentos del período", expanded=True):
             df_top = (df_of5.sort_values("Descuento_pct", ascending=False)
-                            .head(20)[["Cadena","Marca","Producto","Gramaje","Envase",
+                            .head(20)[["Cadena","Marca","Producto","Gramaje",
                                        "Precio","Precio_oferta","Descuento_pct"]]
                             .copy())
-            df_top.columns = ["Cadena","Marca","Producto","Gramaje","Envase",
+            df_top.columns = ["Cadena","Marca","Producto","Gramaje",
                               "Precio góndola ($)","Precio oferta ($)","Descuento %"]
             st.dataframe(df_top, height=400,
                 column_config={
@@ -1978,9 +1899,9 @@ with tab10:
     df_tabla = df_tabla.sort_values(col_ord[orden_col], na_position="last")
 
     df_show = df_tabla[["Periodo","Cadena","Marca","Producto",
-                          "Gramaje","Envase","Precio","Precio_litro","En_oferta"]].copy()
+                          "Gramaje","Precio","Precio_litro","En_oferta"]].copy()
     df_show.columns = ["Semana","Cadena","Marca","Producto",
-                        "Gramaje","Envase","Precio góndola ($)","Precio/Litro ($)","En oferta"]
+                        "Gramaje","Precio góndola ($)","Precio/Litro ($)","En oferta"]
 
     st.markdown(f"**{len(df_show):,} productos** · precios de góndola")
     st.dataframe(df_show, height=530,
@@ -2132,10 +2053,10 @@ with tab3:
             # Tabla detallada
             st.markdown('<div class="chart-title">Detalle completo de registros</div>',
                         unsafe_allow_html=True)
-            df7_show = (df7_sku_filter[["Periodo","Cadena","SKU_canonico","Gramaje","Envase",
+            df7_show = (df7_sku_filter[["Periodo","Cadena","SKU_canonico","Gramaje",
                                         "Precio","Precio_oferta","Descuento_pct","En_oferta"]]
                         .sort_values(["Periodo","Cadena","Precio"]).copy())
-            df7_show.columns = ["Semana","Cadena","SKU","Gramaje","Envase",
+            df7_show.columns = ["Semana","Cadena","SKU","Gramaje",
                                  "Precio góndola ($)","Precio oferta ($)","Descuento %","En oferta"]
             st.dataframe(df7_show, height=400,
                 column_config={
