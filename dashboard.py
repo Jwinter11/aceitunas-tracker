@@ -438,11 +438,15 @@ def _marca(nombre: str, guardada) -> str:
 
 def _envase(nombre: str) -> str:
     n = nombre.lower()
-    if "lata"    in n: return "Lata"
-    if "aerosol" in n: return "Aerosol"
-    if "tetra"   in n: return "Tetra"
-    if " pet "   in n or n.endswith(" pet"): return "PET"
-    if "vidrio"  in n: return "Vidrio"
+    if "lata"     in n: return "Lata"
+    if "aerosol"  in n: return "Aerosol"
+    if "doypack"  in n: return "Doypack"
+    if "bandeja"  in n: return "Bandeja"
+    if "tetra"    in n: return "Tetra"
+    if " pet "    in n or n.endswith(" pet"): return "PET"
+    if "plastico" in n or "plástico" in n:   return "PET"
+    if "vidrio"   in n: return "Vidrio"
+    if "frasco"   in n: return "Frasco"
     return "Botella"
 
 def _variedad(nombre: str) -> str:
@@ -594,6 +598,12 @@ df_full = cargar_datos(_mtime=_historial_mtime())
 if df_full.empty:
     st.error("⚠️ Sin datos. Ejecutá primero: **python scraper.py**")
     st.stop()
+
+# Columnas derivadas: fallback por si el caché es de una versión anterior
+if "Envase" not in df_full.columns:
+    df_full["Envase"]   = df_full["Producto"].apply(_envase)
+if "Variedad" not in df_full.columns:
+    df_full["Variedad"] = df_full["Producto"].apply(_variedad)
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 def cc(c): return COLORS_CADENAS.get(c, "#6B7280")
