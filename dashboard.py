@@ -783,6 +783,10 @@ with _hdr_btn:
     if st.button("🔄 Actualizar", key="refresh_header", help="Recargar datos"):
         st.cache_data.clear()
         st.rerun()
+    if st.button("🫒 Aceitunas", key="goto_aceitunas",
+                 help="Ir al tracker de aceitunas (puerto 8502)"):
+        import webbrowser as _wb
+        _wb.open("http://localhost:8502")
 
 # ── Notificaciones de favoritos ───────────────────────────────────────────
 _favs = st.session_state.get("favoritos", [])
@@ -1351,11 +1355,16 @@ with tab1:
                     _of_unif.sort(key=lambda x: x["pct"], reverse=True)
                     if not _of_unif:
                         st.markdown("<span style='color:#111827;font-size:0.82rem'>Sin ofertas activas.</span>", unsafe_allow_html=True)
-                    for _oi in _of_unif:
-                        st.markdown(_fila(_oi["Producto"], _oi["Cadena"], "▼",
-                                          _oi["pct_str"], _oi["p_de"], _oi["p_a"],
-                                          "#B45309", _oi["url"]),
-                                    unsafe_allow_html=True)
+                    _of_html = "".join(
+                        _fila(_oi["Producto"], _oi["Cadena"], "▼",
+                              _oi["pct_str"], _oi["p_de"], _oi["p_a"],
+                              "#B45309", _oi["url"])
+                        for _oi in _of_unif
+                    )
+                    st.markdown(
+                        f'<div style="max-height:420px;overflow-y:auto;padding-right:4px">{_of_html}</div>',
+                        unsafe_allow_html=True,
+                    )
 
 
 # ══════════════════════════════════════════════════════════════════════════
