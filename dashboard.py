@@ -922,27 +922,30 @@ def hbar(df_x, df_y, colores, textos, titulo_x, altura=320):
     )
     return fig
 
-def gram_filter(key, source=None):
+def gram_filter(key, source=None, hide_label=False):
     """Devuelve (dff_local, etiqueta) filtrado por gramaje con selectbox."""
     src = source if source is not None else dff
     opts = ["Todos los gramajes"] + [e for e in GRAMAJE_BUCKETS if src["Gramaje"].eq(e).any()]
-    sel  = st.selectbox("📦 Gramaje", opts, key=key)
+    lv = "collapsed" if hide_label else "visible"
+    sel  = st.selectbox("📦 Gramaje", opts, key=key, label_visibility=lv)
     out  = src if sel == "Todos los gramajes" else src[src["Gramaje"] == sel]
     return out, sel
 
-def envase_filter(key, source=None):
+def envase_filter(key, source=None, hide_label=False):
     """Devuelve (dff_local, etiqueta) filtrado por tipo de envase."""
     src  = source if source is not None else dff
     opts = ["Todos los envases"] + sorted(src["Envase"].dropna().unique().tolist())
-    sel  = st.selectbox("🫙 Envase", opts, key=key)
+    lv = "collapsed" if hide_label else "visible"
+    sel  = st.selectbox("🫙 Envase", opts, key=key, label_visibility=lv)
     out  = src if sel == "Todos los envases" else src[src["Envase"] == sel]
     return out, sel
 
-def variedad_filter(key, source=None):
+def variedad_filter(key, source=None, hide_label=False):
     """Devuelve (dff_local, etiqueta) filtrado por variedad de aceite."""
     src  = source if source is not None else dff
     opts = ["Todas las variedades"] + sorted(src["Variedad"].dropna().unique().tolist())
-    sel  = st.selectbox("🌿 Variedad", opts, key=key)
+    lv = "collapsed" if hide_label else "visible"
+    sel  = st.selectbox("🌿 Variedad", opts, key=key, label_visibility=lv)
     out  = src if sel == "Todas las variedades" else src[src["Variedad"] == sel]
     return out, sel
 
@@ -1417,16 +1420,21 @@ with tab1:
 # TAB 2 · POR CADENA
 # ══════════════════════════════════════════════════════════════════════════
 with tab2:
+    _lbl = '<p style="font-size:0.7rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px">'
     _fc2a, _fc2var, _fc2env, _fc2b = st.columns([2, 2, 2, 2])
     with _fc2a:
-        dff2, _ = gram_filter("gram_tab2")
+        st.markdown(_lbl + "📦 Gramaje</p>", unsafe_allow_html=True)
+        dff2, _ = gram_filter("gram_tab2", hide_label=True)
     with _fc2var:
-        dff2, _ = variedad_filter("var_tab2", dff2)
+        st.markdown(_lbl + "🌿 Variedad</p>", unsafe_allow_html=True)
+        dff2, _ = variedad_filter("var_tab2", dff2, hide_label=True)
     with _fc2env:
-        dff2, _ = envase_filter("env_tab2", dff2)
+        st.markdown(_lbl + "🫙 Envase</p>", unsafe_allow_html=True)
+        dff2, _ = envase_filter("env_tab2", dff2, hide_label=True)
     with _fc2b:
+        st.markdown(_lbl + "🏪 Cadena</p>", unsafe_allow_html=True)
         _cadenas2_opts = ["Todas las cadenas"] + sorted(dff2["Cadena"].unique().tolist())
-        _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2")
+        _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2", label_visibility="collapsed")
     if _cadena2_sel != "Todas las cadenas":
         dff2 = dff2[dff2["Cadena"] == _cadena2_sel].copy()
 
@@ -1523,16 +1531,21 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════
 with tab3:
     # Filtros en la misma fila para que ambos gráficos arranquen al mismo nivel
+    _lbl = '<p style="font-size:0.7rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px">'
     _fc3a, _fc3var, _fc3env, _fc3b = st.columns([2, 2, 2, 2])
     with _fc3a:
-        dff3, _ = gram_filter("gram_tab3")
+        st.markdown(_lbl + "📦 Gramaje</p>", unsafe_allow_html=True)
+        dff3, _ = gram_filter("gram_tab3", hide_label=True)
     with _fc3var:
-        dff3, _ = variedad_filter("var_tab3", dff3)
+        st.markdown(_lbl + "🌿 Variedad</p>", unsafe_allow_html=True)
+        dff3, _ = variedad_filter("var_tab3", dff3, hide_label=True)
     with _fc3env:
-        dff3, _ = envase_filter("env_tab3", dff3)
+        st.markdown(_lbl + "🫙 Envase</p>", unsafe_allow_html=True)
+        dff3, _ = envase_filter("env_tab3", dff3, hide_label=True)
     with _fc3b:
+        st.markdown(_lbl + "🏪 Cadena</p>", unsafe_allow_html=True)
         cadenas_pie3 = ["Todas las cadenas"] + sorted(dff3["Cadena"].unique().tolist())
-        cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3")
+        cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3", label_visibility="collapsed")
 
     src_pie3 = dff3 if cadena_pie3 == "Todas las cadenas" else dff3[dff3["Cadena"]==cadena_pie3]
 
