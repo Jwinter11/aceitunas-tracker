@@ -2553,7 +2553,9 @@ with tab7:
 
         _mm_cd1, _mm_cd2 = st.columns(2)
         with _mm_cd1:
-            _mm_pct_of_marca = (_mm_of_src["En_oferta"].mean() * 100)
+            _mm_skus_con_of = _mm_of_src[_mm_of_src["En_oferta"]]["SKU_canonico"].nunique()
+            _mm_skus_total  = _mm_of_src["SKU_canonico"].nunique()
+            _mm_pct_of_marca = (_mm_skus_con_of / _mm_skus_total * 100) if _mm_skus_total > 0 else 0
             st.markdown(
                 f"<div style='background:#FFF7ED;border-radius:10px;padding:0.8rem 1rem;"
                 f"border-left:3px solid #F97316'>"
