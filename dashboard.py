@@ -2636,7 +2636,7 @@ with tab7:
                     y=_df_cad["SKUs_activos"],
                     mode="lines+markers",
                     name=_cad,
-                    line=dict(color=COLORES_CADENA.get(_cad, "#9CA3AF"), width=2),
+                    line=dict(color=COLORS_CADENAS.get(_cad, "#9CA3AF"), width=2),
                     marker=dict(size=5),
                     hovertemplate="%{x|%d/%m/%Y}<br>%{y} SKUs<extra>" + _cad + "</extra>",
                 ))
