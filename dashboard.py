@@ -2612,47 +2612,77 @@ with tab7:
         else:
             st.info("Sin datos de distribución para esta marca.")
 
-        # ── F) Histórico semanal de SKUs activos por cadena ───────────
+        # ── F) Presencia por cadena — período semanal ───────────
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">📈 SKUs activos por cadena — evolución semanal</div>',
+        st.markdown('<div class="chart-title">📍 Presencia por cadena — SKU × Cadena</div>',
                     unsafe_allow_html=True)
-        _mm_hist_src = df_full[df_full["Marca_raw"] == _mm_sel].copy()
+        _mm_pres_src = df_full[df_full["Marca_raw"] == _mm_sel].copy()
         if _mm_sku_sel != "Todos los SKUs":
-            _mm_hist_src = _mm_hist_src[_mm_hist_src["SKU_canonico"] == _mm_sku_sel]
-        if not _mm_hist_src.empty:
-            _mm_hist_src["Semana"] = pd.to_datetime(_mm_hist_src["Fecha"]).dt.to_period("W").dt.start_time
-            _mm_sku_cad_sem = (
-                _mm_hist_src.groupby(["Semana", "Cadena"])["SKU_canonico"]
-                .nunique().reset_index(name="SKUs_activos")
+            _mm_pres_src = _mm_pres_src[_mm_pres_src["SKU_canonico"] == _mm_sku_sel]
+        if not _mm_pres_src.empty:
+            _mm_pres_fechas = sorted(df_full["Fecha"].unique())
+            _mm_seen_sem: dict = {}
+            for _f in _mm_pres_fechas:
+                _ts = pd.Timestamp(_f)
+                _k = f"Sem {_ts.isocalendar().week} · {_ts.strftime('%b %Y')}"
+                if _k not in _mm_seen_sem:
+                    _mm_seen_sem[_k] = []
+                _mm_seen_sem[_k].append(_f)
+            _mm_per_labels = list(_mm_seen_sem.keys())
+            _mm_pres_lbl = st.selectbox(
+                "🗓️ Período a visualizar",
+                _mm_per_labels,
+                index=len(_mm_per_labels) - 1,
+                key="mm_pres_ventana",
             )
-            _mm_cadenas_ord = sorted(_mm_sku_cad_sem["Cadena"].unique())
-            fig_sku_hist = go.Figure()
-            for _cad in _mm_cadenas_ord:
-                _df_cad = _mm_sku_cad_sem[_mm_sku_cad_sem["Cadena"] == _cad].sort_values("Semana")
-                if _df_cad.empty:
-                    continue
-                fig_sku_hist.add_trace(go.Scatter(
-                    x=_df_cad["Semana"],
-                    y=_df_cad["SKUs_activos"],
-                    mode="lines+markers",
-                    name=_cad,
-                    line=dict(color=COLORS_CADENAS.get(_cad, "#9CA3AF"), width=2),
-                    marker=dict(size=5),
-                    hovertemplate=_cad + ": %{y} SKUs<extra></extra>",
-                ))
-            fig_sku_hist.update_layout(
-                **_BASE_CORE,
-                margin=dict(l=10, r=10, t=40, b=10),
-                height=320,
-                xaxis=dict(title="Semana", tickformat="%d/%m/%y", tickfont=dict(size=11, color="#111827")),
-                yaxis=dict(title="SKUs activos", tickfont=dict(size=11, color="#111827"), dtick=1),
-                hovermode="x unified",
+            _mm_pres_fechas_sel = _mm_seen_sem[_mm_pres_lbl]
+            st.markdown(
+                f'<div class="chart-note">'
+                f'🟢 activo en al menos 1 scrape de <b>{_mm_pres_lbl}</b> &nbsp;·&nbsp; '
+                f'🔴 estuvo antes pero no en este período &nbsp;·&nbsp; — nunca en esa cadena.'
+                f'</div>',
+                unsafe_allow_html=True)
+            _mm_ventana_df  = _mm_pres_src[_mm_pres_src["Fecha"].isin(_mm_pres_fechas_sel)]
+            _mm_pres_set    = set(zip(_mm_ventana_df["SKU_canonico"], _mm_ventana_df["Cadena"]))
+            _mm_todos_skus  = sorted(_mm_pres_src["SKU_canonico"].unique())
+            _mm_todas_cad   = sorted(df_full["Cadena"].unique())
+            _mm_hist_set    = set(zip(_mm_pres_src["SKU_canonico"], _mm_pres_src["Cadena"]))
+            _mm_pz, _mm_pt = [], []
+            for _sk in _mm_todos_skus:
+                _rz, _rt = [], []
+                for _cd in _mm_todas_cad:
+                    if (_sk, _cd) in _mm_pres_set:
+                        _rz.append(1);  _rt.append("✓")
+                    elif (_sk, _cd) in _mm_hist_set:
+                        _rz.append(-1); _rt.append("✗")
+                    else:
+                        _rz.append(0);  _rt.append("—")
+                _mm_pz.append(_rz); _mm_pt.append(_rt)
+            _mm_pres_colorscale = [
+                [0.00, "#FCA5A5"], [0.33, "#FCA5A5"],
+                [0.34, "#F3F4F6"], [0.66, "#F3F4F6"],
+                [0.67, "#86EFAC"], [1.00, "#86EFAC"],
+            ]
+            _mm_pres_h = max(200, len(_mm_todos_skus) * 38 + 80)
+            fig_mm_pres = go.Figure(go.Heatmap(
+                z=_mm_pz,
+                x=_mm_todas_cad,
+                y=_mm_todos_skus,
+                colorscale=_mm_pres_colorscale, zmin=-1, zmax=1,
+                text=_mm_pt, texttemplate="%{text}",
+                textfont=dict(size=13, color="#111827"),
+                showscale=False, xgap=3, ygap=3,
+            ))
+            fig_mm_pres.update_layout(
+                **BASE,
+                height=_mm_pres_h,
+                xaxis=dict(tickfont=dict(size=12, color="#111827"), side="top"),
+                yaxis=dict(tickfont=dict(size=11, color="#111827")),
             )
-            st.plotly_chart(fig_sku_hist)
+            st.plotly_chart(fig_mm_pres)
         else:
-            st.info("Sin datos históricos para esta marca.")
+            st.info("Sin datos de presencia para esta marca.")
 
-# ══════════════════════════════════════════════════════════════════════════
 # TAB 9 · QUIEBRES DE STOCK
 # ══════════════════════════════════════════════════════════════════════════
 with tab9:
