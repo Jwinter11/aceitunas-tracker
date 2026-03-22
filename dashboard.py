@@ -436,6 +436,15 @@ def _marca(nombre: str, guardada) -> str:
             return w.strip(".,()-/&°")
     return "Otras"
 
+def _envase(nombre: str) -> str:
+    n = nombre.lower()
+    if "lata"    in n: return "Lata"
+    if "aerosol" in n: return "Aerosol"
+    if "tetra"   in n: return "Tetra"
+    if " pet "   in n or n.endswith(" pet"): return "PET"
+    if "vidrio"  in n: return "Vidrio"
+    return "Botella"
+
 # ── Carga de datos ────────────────────────────────────────────────────────
 def _historial_mtime():
     db = DIRECTORIO / "precios.db"
@@ -512,6 +521,7 @@ def cargar_datos(_mtime=None) -> pd.DataFrame:
                 "Precio_oferta": int(round(precio)),
                 "Descuento_pct": desc,
                 "En_oferta":     bool(r["en_oferta"]),
+                "Envase":        _envase(r["nombre"]),
                 "Producto_key":  pid or r["nombre"],
                 "Producto_url":  prod_url,
             })
@@ -547,6 +557,7 @@ def cargar_datos(_mtime=None) -> pd.DataFrame:
                     "Precio_oferta": int(round(precio)),
                     "Descuento_pct": desc,
                     "En_oferta":     bool(p.get("en_oferta", False)),
+                    "Envase":        _envase(p["nombre"]),
                     "Producto_key":  p.get("producto_id") or p["nombre"],
                     "Producto_url":  prod_url,
                 })
@@ -898,6 +909,14 @@ def gram_filter(key, source=None):
     opts = ["Todos los gramajes"] + [e for e in GRAMAJE_BUCKETS if src["Gramaje"].eq(e).any()]
     sel  = st.selectbox("📦 Gramaje", opts, key=key)
     out  = src if sel == "Todos los gramajes" else src[src["Gramaje"] == sel]
+    return out, sel
+
+def envase_filter(key, source=None):
+    """Devuelve (dff_local, etiqueta) filtrado por tipo de envase."""
+    src  = source if source is not None else dff
+    opts = ["Todos los envases"] + sorted(src["Envase"].dropna().unique().tolist())
+    sel  = st.selectbox("🫙 Envase", opts, key=key)
+    out  = src if sel == "Todos los envases" else src[src["Envase"] == sel]
     return out, sel
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1371,9 +1390,11 @@ with tab1:
 # TAB 2 · POR CADENA
 # ══════════════════════════════════════════════════════════════════════════
 with tab2:
-    _fc2a, _fc2b, _ = st.columns([2, 2, 3])
+    _fc2a, _fc2env, _fc2b = st.columns([2, 2, 2])
     with _fc2a:
         dff2, _ = gram_filter("gram_tab2")
+    with _fc2env:
+        dff2, _ = envase_filter("env_tab2", dff2)
     with _fc2b:
         _cadenas2_opts = ["Todas las cadenas"] + sorted(dff2["Cadena"].unique().tolist())
         _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2")
@@ -1473,9 +1494,11 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════
 with tab3:
     # Filtros en la misma fila para que ambos gráficos arranquen al mismo nivel
-    _fc3a, _fc3b, _ = st.columns([2, 2, 3])
+    _fc3a, _fc3env, _fc3b = st.columns([2, 2, 2])
     with _fc3a:
         dff3, _ = gram_filter("gram_tab3")
+    with _fc3env:
+        dff3, _ = envase_filter("env_tab3", dff3)
     with _fc3b:
         cadenas_pie3 = ["Todas las cadenas"] + sorted(dff3["Cadena"].unique().tolist())
         cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3")
@@ -1553,9 +1576,11 @@ with tab4:
         st.info("📅 **Solo hay una semana cargada.** "
                 "Ejecutá `python scraper.py` la semana que viene para ver la evolución.")
 
-    _fc4a, _fc4b, _ = st.columns([2, 2, 3])
+    _fc4a, _fc4env, _fc4b, _ = st.columns([2, 2, 2, 1])
     with _fc4a:
         dff4, _ = gram_filter("gram_tab4")
+    with _fc4env:
+        dff4, _ = envase_filter("env_tab4", dff4)
     with _fc4b:
         _usar_real4 = st.checkbox("Mostrar en pesos reales (ajustado por inflación)",
                                    key="toggle_real_ev4", value=False)
