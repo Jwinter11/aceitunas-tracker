@@ -230,7 +230,10 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                     precio_sin = round(price, 2)
                     price      = spot_price
                 else:
-                    en_oferta  = list_price > price * 1.01 and precio_valido(list_price)
+                    # ListPrice > 1.35x del precio actual = MSRP inflado (no aparece en el site)
+                    en_oferta  = (list_price > price * 1.01
+                                  and list_price <= price * 1.35
+                                  and precio_valido(list_price))
                     precio_sin = list_price if en_oferta else None
 
                 measure_unit = sku.get("measurementUnit", "")
@@ -260,12 +263,11 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                     "precio":         round(price, 2),
                     "precio_sin_dto":  round(precio_sin, 2) if precio_sin else None,
                     "en_oferta":      en_oferta,
+                    "producto_id":    str(prod_id),
                 })
                 nuevos += 1
 
             print(f"  [{supermercado}] '{termino}' → {nuevos} productos nuevos")
-            if nuevos > 0:
-                break  # Suficiente con el primer término que dio resultados
 
         except Exception as e:
             print(f"  [{supermercado}] Error con '{termino}': {e}")
@@ -334,6 +336,7 @@ def scrape_changomas() -> list[dict]:
                     textos_extra.append(spec_vals)
             ml = extraer_ml(nombre, measure_unit, unit_mult, textos_extra)
 
+            link = item.get("link") or ""
             productos.append({
                 "supermercado":  "Chango Mas",
                 "nombre":        nombre,
@@ -341,6 +344,7 @@ def scrape_changomas() -> list[dict]:
                 "precio":        round(price, 2),
                 "precio_sin_dto": precio_sin,
                 "en_oferta":     en_oferta,
+                "producto_id":   link if link.startswith("/") else str(prod_id),
             })
             nuevos += 1
 
@@ -357,11 +361,110 @@ def scrape_changomas() -> list[dict]:
 # Scraper Cencosud: Jumbo / Disco / Vea (API Intelligent Search)
 # Usa el endpoint VTEX IO Intelligent Search con map=ft para obtener
 # resultados reales de aceite de oliva (152 productos vs 48 del catalog).
-# Los descuentos directos (ej: "15% (20% con Cencopay)") se detectan via
-# productClusters y se aplican al Price. Descuentos multi-unidad o de puntos
-# se ignoran. Los descuentos exclusivos de tarjeta Cencopay no son distinguibles
-# del precio público desde la API; se toma el porcentaje del primer número.
+# Scraper Playwright para Disco, Jumbo y Vea.
+# Lee el precio renderizado en pantalla igual que Coto: captura precios
+# de góndola y descuentos visibles (Fin de Semana, ListPrice, etc.)
 # ---------------------------------------------------------------------------
+
+def _parsear_precio_disco(texto: str) -> float | None:
+    """Extrae precio en pesos de un string como '$20.350' o '$7.650'."""
+    if not texto:
+        return None
+    corte = re.search(r"sin\s+impuesto", texto, re.IGNORECASE)
+    if corte:
+        texto = texto[:corte.start()]
+    m = re.search(r'\$([\s\d.]+)', texto)
+    if not m:
+        return None
+    try:
+        v = float(m.group(1).replace(".", "").replace(",", ".").strip())
+        if precio_valido(v):
+            return v
+    except ValueError:
+        pass
+    return None
+
+
+# JS que corre dentro de la página Playwright para extraer productos con precios
+_JS_EXTRAER_CENCOSUD = """() => {
+    // Contenedor: galleryItem (cada tarjeta de producto en la grilla VTEX)
+    const cards = document.querySelectorAll('[class*="galleryItem"]');
+    const result = [];
+    for (const card of cards) {
+        // Nombre del producto
+        const nameEl = card.querySelector('[class*="nameContainer"], [class*="brandName"], [class*="productName"]');
+        if (!nameEl) continue;
+        const name = nameEl.textContent.trim();
+        if (!name) continue;
+
+        // Precios: recorrer TODOS los nodos hoja del card
+        let currentPrice = null;
+        let originalPrice = null;
+        let discountPct = null;
+
+        const allEls = card.querySelectorAll('*');
+        for (const el of allEls) {
+            if (el.children.length > 0) continue;
+            const text = el.textContent.trim();
+
+            // Badge de descuento tipo "-25%", "25%", "25% OFF"
+            // Busca hasta 5 niveles de ancestro para capturar badges anidados
+            if (!discountPct) {
+                let clsCtx = '';
+                let node = el;
+                for (let i = 0; i < 5 && node; i++) {
+                    clsCtx += ' ' + (node.getAttribute('class') || '');
+                    node = node.parentElement;
+                }
+                const isBadge = /saving|discount|badge|promo|ofert|percent|sticker|label|tag/i.test(clsCtx);
+                if (isBadge) {
+                    const mPct = text.match(/^-?(\d{1,2})\s*%(\s*off)?$/i);
+                    if (mPct) {
+                        const pct = parseInt(mPct[1]);
+                        if (pct >= 5 && pct <= 80) discountPct = pct;
+                    }
+                }
+            }
+
+            // Precio argentino: empieza con $ seguido de dígitos y puntos
+            if (!text.match(/^[$][0-9][0-9.]+$/)) continue;
+            // Ignorar precio por litro ("Precio regular x lt.")
+            const parent = el.parentElement;
+            const parentText = parent ? parent.textContent : '';
+            if (parentText.toLowerCase().includes('lt.') || parentText.toLowerCase().includes('litro')) continue;
+            if (parentText.toLowerCase().includes('impuesto')) continue;
+
+            const deco = window.getComputedStyle(el).textDecorationLine || '';
+            if (deco.includes('line-through')) {
+                originalPrice = text;   // precio tachado = precio sin descuento
+            } else {
+                if (!currentPrice) currentPrice = text;   // primer precio sin tachado = precio a pagar
+            }
+        }
+
+        // Si hay badge de % pero no precio tachado: calcular el precio original
+        if (currentPrice && discountPct && !originalPrice) {
+            const num = parseFloat(currentPrice.slice(1).replace(/[.]/g, '').replace(',', '.'));
+            const orig = Math.round(num / (1 - discountPct / 100));
+            // Formatear como precio argentino (puntos de miles)
+            originalPrice = '$' + orig.toLocaleString('es-AR');
+        }
+
+        // URL del producto (identificador único independiente del nombre)
+        let productHref = null;
+        const cardLink = card.querySelector('a[href]');
+        if (cardLink) {
+            const href = cardLink.getAttribute('href');
+            if (href && href.startsWith('/')) productHref = href;
+        }
+
+        if (currentPrice) {
+            result.push({ name, currentPrice, originalPrice, productHref });
+        }
+    }
+    return result;
+}"""
+
 
 def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
     """Scraper API para Disco, Jumbo y Vea via VTEX Intelligent Search."""
@@ -478,6 +581,7 @@ def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
                 "precio":         round(price, 2),
                 "precio_sin_dto": precio_sin,
                 "en_oferta":      en_oferta,
+                "producto_id":    str(prod_id),
             })
             nuevos += 1
 
@@ -493,6 +597,116 @@ def scrape_cencosud(supermercado: str, base_url: str) -> list[dict]:
             break
         pagina += 1
 
+    return productos
+
+
+def scrape_cencosud_playwright(supermercado: str, base_url: str) -> list[dict]:
+    """
+    Scraper Playwright para Disco, Jumbo y Vea.
+    Renderiza la página real y lee el precio visible + tachado (precio_sin_dto).
+    Captura descuentos de Fin de Semana y cualquier otro descuento mostrado en pantalla.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print(f"  [{supermercado}] Playwright no instalado. Saltando.")
+        return []
+
+    BASE_URL = f"{base_url}/aceite%20de%20oliva?_q=ACEITE+DE+OLIVA&map=ft"
+    productos = []
+    vistos: set[str] = set()
+    items_total: list[dict] = []
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=False)
+        page = browser.new_page()
+        try:
+            # ── Primar cookies VTEX ──────────────────────────────────────────
+            # El cookie vtex_segment controla tabla de precios y promociones.
+            # Sin él, Chromium arranca "sin canal" y no ve descuentos de fin
+            # de semana (igual que Chrome recién abierto sin historial).
+            # Solución: cargar la home primero para que VTEX setee el segmento,
+            # igual que lo haría cualquier navegador con visitas previas.
+            print(f"  [{supermercado}] Iniciando sesión VTEX (home)...")
+            try:
+                page.goto(base_url, timeout=60_000, wait_until="domcontentloaded")
+                page.wait_for_timeout(3_000)   # dar tiempo a scripts de personalización
+            except Exception as e_home:
+                print(f"  [{supermercado}] Home tardó mucho, continuando igual...")
+
+            pagina = 1
+            while True:
+                URL = BASE_URL if pagina == 1 else f"{BASE_URL}&page={pagina}"
+                print(f"  [{supermercado}] Cargando página {pagina}: {URL}")
+                page.goto(URL, timeout=30_000, wait_until="domcontentloaded")
+
+                # Esperar que React renderice al menos una gallery card
+                try:
+                    page.wait_for_selector('[class*="galleryItem"]', timeout=20_000)
+                except Exception:
+                    print(f"  [{supermercado}] Sin products en pág {pagina}, terminando.")
+                    break
+
+                # Scroll para que todas las cards de esta página se rendericen
+                for _ in range(20):
+                    page.evaluate("window.scrollBy(0, 600)")
+                    page.wait_for_timeout(300)
+                page.evaluate("window.scrollTo(0, 0)")
+                page.wait_for_timeout(800)
+
+                n_cards = page.evaluate(
+                    "document.querySelectorAll('[class*=\"galleryItem\"]').length"
+                )
+                print(f"  [{supermercado}] Pág {pagina}: {n_cards} cards")
+
+                items_pag = page.evaluate(_JS_EXTRAER_CENCOSUD)
+                items_total.extend(items_pag)
+
+                if n_cards == 0 or not items_pag:
+                    break
+                pagina += 1
+                if pagina > 10:   # máx 10 páginas por seguridad
+                    break
+
+        except Exception as e:
+            print(f"  [{supermercado}] Error Playwright: {e}")
+        finally:
+            browser.close()
+
+        items = items_total
+
+    for item in items:
+        nombre = (item.get("name") or "").strip()
+        if not nombre or not es_aceite_oliva(nombre):
+            continue
+        if nombre in vistos:
+            continue
+        vistos.add(nombre)
+
+        precio     = _parsear_precio_disco(item.get("currentPrice") or "")
+        precio_orig = _parsear_precio_disco(item.get("originalPrice") or "")
+
+        if not precio:
+            continue
+
+        en_oferta = bool(
+            precio_orig
+            and precio_orig > precio * 1.01
+            and precio_valido(precio_orig)
+        )
+
+        ml = extraer_ml(nombre)
+        productos.append({
+            "supermercado":   supermercado,
+            "nombre":         nombre,
+            "ml":             ml,
+            "precio":         round(precio, 2),
+            "precio_sin_dto": round(precio_orig, 2) if en_oferta else None,
+            "en_oferta":      en_oferta,
+            "producto_id":    item.get("productHref") or nombre,
+        })
+
+    print(f"  [{supermercado}] {len(productos)} productos de aceite de oliva")
     return productos
 
 
@@ -576,9 +790,12 @@ def scrape_coto() -> list[dict]:
                 nombre = nombre_tag.get_text(strip=True)
                 if not es_aceite_oliva(nombre):
                     continue
-                if nombre in vistos:
+                # href como ID único (distingue SKUs con mismo nombre de display)
+                href_tag = card.select_one("a[href]")
+                coto_id = href_tag["href"] if href_tag and href_tag.get("href") else nombre
+                if coto_id in vistos:
                     continue
-                vistos.add(nombre)
+                vistos.add(coto_id)
 
                 # Precio actual: .card-title
                 precio_tag = card.select_one(".card-title")
@@ -608,6 +825,7 @@ def scrape_coto() -> list[dict]:
                     "precio":        round(precio_real, 2),
                     "precio_sin_dto": round(precio_sin, 2) if precio_sin else None,
                     "en_oferta":     en_oferta,
+                    "producto_id":   coto_id,
                 })
                 nuevos_pagina += 1
 
@@ -735,9 +953,12 @@ def scrape_anonima() -> list[dict]:
 
             if not nombre or not es_aceite_oliva(nombre):
                 continue
-            if nombre in vistos_an:
+            # href como ID único
+            a_link = item.select_one("a[href]")
+            anon_id = a_link.get("href", nombre) if a_link else nombre
+            if anon_id in vistos_an:
                 continue
-            vistos_an.add(nombre)
+            vistos_an.add(anon_id)
 
             # ── Precio regular (el grande, ej: $ 13.800) ─────────────────
             precio_regular = None
@@ -790,6 +1011,7 @@ def scrape_anonima() -> list[dict]:
                 "precio":        round(precio_real, 2),
                 "precio_sin_dto": round(precio_sin, 2) if precio_sin else None,
                 "en_oferta":     en_oferta,
+                "producto_id":   anon_id,
             })
 
         print(f"  [La Anonima] {len(productos)} productos encontrados")
@@ -799,8 +1021,52 @@ def scrape_anonima() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Historial JSON
+# Historial JSON + SQLite
 # ---------------------------------------------------------------------------
+
+DB_PATH = DIRECTORIO / "precios.db"
+
+def _init_db(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS precios (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha          TEXT    NOT NULL,
+            supermercado   TEXT    NOT NULL,
+            nombre         TEXT    NOT NULL,
+            ml             INTEGER,
+            precio         REAL    NOT NULL,
+            precio_sin_dto REAL,
+            en_oferta      INTEGER NOT NULL DEFAULT 0,
+            marca          TEXT,
+            precio_litro   INTEGER,
+            producto_id    TEXT,
+            UNIQUE(fecha, supermercado, nombre)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_fecha ON precios(fecha)")
+
+
+def guardar_en_sqlite(productos: list[dict], fecha: str) -> None:
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+    _init_db(cur)
+    cur.execute("DELETE FROM precios WHERE fecha = ?", (fecha,))
+    cur.executemany("""
+        INSERT OR IGNORE INTO precios
+          (fecha, supermercado, nombre, ml, precio, precio_sin_dto,
+           en_oferta, marca, precio_litro, producto_id)
+        VALUES (:fecha, :supermercado, :nombre, :ml, :precio, :precio_sin_dto,
+                :en_oferta, :marca, :precio_litro, :producto_id)
+    """, [{"fecha": fecha, "supermercado": p.get("supermercado",""),
+           "nombre": p.get("nombre",""), "ml": p.get("ml"),
+           "precio": p.get("precio", 0), "precio_sin_dto": p.get("precio_sin_dto"),
+           "en_oferta": 1 if p.get("en_oferta") else 0,
+           "marca": p.get("marca"), "precio_litro": p.get("precio_litro"),
+           "producto_id": p.get("producto_id")} for p in productos])
+    conn.commit()
+    conn.close()
+
 
 def cargar_historial() -> dict:
     if ARCHIVO_HISTORIAL.exists():
@@ -1329,10 +1595,10 @@ def main():
         print(f"  Total {nombre}: {len(prods)} productos")
         todos_los_productos.extend(prods)
 
-    # Cencosud con Playwright (Jumbo, Disco, Vea) — captura precios reales con descuento
+    # Cencosud con Playwright (Jumbo, Disco, Vea) — lee precio renderizado incluyendo Fin de Semana
     for nombre, base_url in CENCOSUD_SUPERS.items():
         print(f"\n[{nombre}]")
-        prods = scrape_cencosud(nombre, base_url)
+        prods = scrape_cencosud_playwright(nombre, base_url)
         print(f"  Total {nombre}: {len(prods)} productos")
         todos_los_productos.extend(prods)
 
@@ -1367,6 +1633,7 @@ def main():
     historial = cargar_historial()
     agregar_corrida(historial, productos_corregidos)
     guardar_historial(historial)
+    guardar_en_sqlite(productos_corregidos, str(date.today()))
     print(f"Historial guardado ({len(historial['semanas'])} corridas acumuladas)")
 
     # Excel

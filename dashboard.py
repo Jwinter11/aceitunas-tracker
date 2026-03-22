@@ -6,7 +6,9 @@ Uso: streamlit run dashboard.py
 
 import json
 import re
+import unicodedata
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import pandas as pd
 import plotly.express as px
@@ -133,10 +135,17 @@ st.set_page_config(page_title="Aceite Tracker | Monitor de Precios",
                    page_icon="🫒", layout="wide", initial_sidebar_state="expanded")
 
 # ── Protección por contraseña ─────────────────────────────────────────────
+_MAX_INTENTOS = 5
+
 def _check_password():
-    pwd_ok = st.session_state.get("_pwd_ok", False)
-    if pwd_ok:
+    if st.session_state.get("_pwd_ok", False):
         return True
+
+    intentos = st.session_state.get("_intentos", 0)
+    if intentos >= _MAX_INTENTOS:
+        st.error("Demasiados intentos fallidos. Cerrá y volvé a abrir el navegador.")
+        st.stop()
+
     st.markdown("""
     <div style="display:flex;flex-direction:column;align-items:center;
                 justify-content:center;min-height:60vh;gap:1.2rem">
@@ -150,12 +159,18 @@ def _check_password():
         pwd = st.text_input("Contraseña", type="password", label_visibility="collapsed",
                             placeholder="Contraseña…")
         if st.button("Entrar", use_container_width=True, type="primary"):
-            correct = st.secrets.get("PASSWORD", "LaToscana2026")
-            if pwd == correct:
+            correct = st.secrets.get("PASSWORD", "")
+            if pwd and pwd == correct:
                 st.session_state["_pwd_ok"] = True
+                st.session_state["_intentos"] = 0
                 st.rerun()
             else:
-                st.error("Contraseña incorrecta")
+                st.session_state["_intentos"] = intentos + 1
+                restantes = _MAX_INTENTOS - st.session_state["_intentos"]
+                if restantes > 0:
+                    st.error(f"Contraseña incorrecta ({restantes} intento{'s' if restantes != 1 else ''} restante{'s' if restantes != 1 else ''})")
+                else:
+                    st.rerun()
     st.stop()
 
 _check_password()
@@ -304,6 +319,37 @@ html,body,[class*="css"],.stApp{font-family:'Inter',sans-serif!important}
     .block-container{padding:0.4rem 0.4rem 2rem!important}
     .stTabs [data-baseweb="tab"]{font-size:0.65rem!important;padding:0.35rem 0.5rem!important}
 }
+/* Expander cerrado: fondo blanco, letra negra */
+[data-testid="stExpander"] details:not([open]) > summary {
+    background:#FFFFFF!important;
+}
+[data-testid="stExpander"] details:not([open]) > summary,
+[data-testid="stExpander"] details:not([open]) > summary * {
+    color:#111827!important;
+}
+/* Expander abierto: fondo oscuro, letra blanca */
+[data-testid="stExpander"] details[open] > summary {
+    background:#0F172A!important;
+}
+[data-testid="stExpander"] details[open] > summary,
+[data-testid="stExpander"] details[open] > summary * {
+    color:#FFFFFF!important;
+}
+/* Hover: fondo gris, letra igual (no cambia) */
+[data-testid="stExpander"] details:not([open]) > summary:hover {
+    background:#F3F4F6!important;
+}
+[data-testid="stExpander"] details:not([open]) > summary:hover,
+[data-testid="stExpander"] details:not([open]) > summary:hover * {
+    color:#111827!important;
+}
+[data-testid="stExpander"] details[open] > summary:hover {
+    background:#1e3a5f!important;
+}
+[data-testid="stExpander"] details[open] > summary:hover,
+[data-testid="stExpander"] details[open] > summary:hover * {
+    color:#FFFFFF!important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -392,41 +438,119 @@ def _marca(nombre: str, guardada) -> str:
 
 # ── Carga de datos ────────────────────────────────────────────────────────
 def _historial_mtime():
+    db = DIRECTORIO / "precios.db"
+    if db.exists():
+        return db.stat().st_mtime
     p = DIRECTORIO / "historial_precios.json"
     return p.stat().st_mtime if p.exists() else 0
 
+_URL_BASE_CADENA = {
+    "Jumbo":       "https://www.jumbo.com.ar",
+    "Disco":       "https://www.disco.com.ar",
+    "Vea":         "https://www.vea.com.ar",
+    "Coto":        "https://www.cotodigital.com.ar",
+    "La Anonima":  "https://www.laanonima.com.ar",
+    "La Anónima":  "https://www.laanonima.com.ar",
+    "Chango Mas":  "https://www.masonline.com.ar",
+    "Chango Más":  "https://www.masonline.com.ar",
+}
+
+def _build_url(superm: str, pid: str, nombre: str) -> str | None:
+    nombre_enc = quote_plus(nombre)
+    _base = _URL_BASE_CADENA.get(superm, "")
+    if _base and pid.startswith("/"):
+        return _base + pid
+    elif superm in ("Día", "Dia"):
+        _nfkd = unicodedata.normalize("NFKD", nombre.lower())
+        _slug = re.sub(r"[^a-z0-9]+", "-", "".join(
+            c for c in _nfkd if not unicodedata.combining(c))).strip("-")
+        return f"https://diaonline.supermercadosdia.com.ar/{_slug}-{pid}/p"
+    elif superm == "Carrefour":
+        return f"https://www.carrefour.com.ar/busca?q={nombre_enc}"
+    elif superm in ("Chango Mas", "Chango Más"):
+        return f"https://www.masonline.com.ar/busca?q={nombre_enc}"
+    elif superm in ("La Anonima", "La Anónima"):
+        return f"https://www.laanonima.com.ar/busca/?q={nombre_enc}"
+    return None
+
+
 @st.cache_data(ttl=3600, hash_funcs={})
 def cargar_datos(_mtime=None) -> pd.DataFrame:
-    path = DIRECTORIO / "historial_precios.json"
-    if not path.exists():
-        return pd.DataFrame()
-    with open(path, encoding="utf-8") as f:
-        hist = json.load(f)
+    import sqlite3
+    db = DIRECTORIO / "precios.db"
     rows = []
-    for sem in hist.get("semanas", []):
-        fecha = sem["fecha"]
-        for p in sem.get("productos", []):
-            ml      = p.get("ml")
-            precio  = p["precio"]
-            gondola = p.get("precio_sin_dto") or precio
+
+    if db.exists():
+        conn = sqlite3.connect(db)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM precios ORDER BY fecha")
+        registros = cur.fetchall()
+        conn.close()
+        for r in registros:
+            fecha   = r["fecha"]
+            ml      = r["ml"]
+            precio  = r["precio"]
+            gondola = r["precio_sin_dto"] or precio
             pl_g    = round(gondola / ml * 1000) if (ml and ml > 0) else None
             desc    = round((gondola - precio) / gondola * 100) if gondola > precio else 0
-            marca_r = _marca(p["nombre"], p.get("marca"))
+            marca_r = _marca(r["nombre"], r["marca"])
+            pid     = r["producto_id"] or ""
+            superm  = r["supermercado"]
+            prod_url = _build_url(superm, pid, r["nombre"])
             rows.append({
                 "Fecha":         fecha,
-                "Cadena":        p["supermercado"],
+                "Cadena":        superm,
                 "Marca_raw":     marca_r,
                 "Marca":         categorizar(marca_r),
-                "Producto":      p["nombre"],
-                "SKU_canonico":  canonicalizar_sku(marca_r, p["nombre"], ml),
+                "Producto":      r["nombre"],
+                "SKU_canonico":  canonicalizar_sku(marca_r, r["nombre"], ml),
                 "Tamaño_ml":     ml,
                 "Gramaje":       bucket_gramaje(ml),
-                "Precio":        int(round(gondola)),       # siempre góndola
+                "Precio":        int(round(gondola)),
                 "Precio_litro":  int(round(pl_g)) if pl_g else None,
-                "Precio_oferta": int(round(precio)),        # solo para tab Ofertas
+                "Precio_oferta": int(round(precio)),
                 "Descuento_pct": desc,
-                "En_oferta":     bool(p.get("en_oferta", False)),
+                "En_oferta":     bool(r["en_oferta"]),
+                "Producto_key":  pid or r["nombre"],
+                "Producto_url":  prod_url,
             })
+    else:
+        path = DIRECTORIO / "historial_precios.json"
+        if not path.exists():
+            return pd.DataFrame()
+        with open(path, encoding="utf-8") as f:
+            hist = json.load(f)
+        for sem in hist.get("semanas", []):
+            fecha = sem["fecha"]
+            for p in sem.get("productos", []):
+                ml      = p.get("ml")
+                precio  = p["precio"]
+                gondola = p.get("precio_sin_dto") or precio
+                pl_g    = round(gondola / ml * 1000) if (ml and ml > 0) else None
+                desc    = round((gondola - precio) / gondola * 100) if gondola > precio else 0
+                marca_r = _marca(p["nombre"], p.get("marca"))
+                pid     = p.get("producto_id") or ""
+                superm  = p["supermercado"]
+                prod_url = _build_url(superm, pid, p["nombre"])
+                rows.append({
+                    "Fecha":         fecha,
+                    "Cadena":        superm,
+                    "Marca_raw":     marca_r,
+                    "Marca":         categorizar(marca_r),
+                    "Producto":      p["nombre"],
+                    "SKU_canonico":  canonicalizar_sku(marca_r, p["nombre"], ml),
+                    "Tamaño_ml":     ml,
+                    "Gramaje":       bucket_gramaje(ml),
+                    "Precio":        int(round(gondola)),
+                    "Precio_litro":  int(round(pl_g)) if pl_g else None,
+                    "Precio_oferta": int(round(precio)),
+                    "Descuento_pct": desc,
+                    "En_oferta":     bool(p.get("en_oferta", False)),
+                    "Producto_key":  p.get("producto_id") or p["nombre"],
+                    "Producto_url":  prod_url,
+                })
+
     df = pd.DataFrame(rows)
     if not df.empty:
         df["Fecha"] = pd.to_datetime(df["Fecha"])
@@ -642,7 +766,9 @@ if _export_excel_btn:
         st.sidebar.warning("Instalá openpyxl: `pip install openpyxl`")
 
 # ── Header ────────────────────────────────────────────────────────────────
-st.markdown(f"""
+_hdr_col, _hdr_btn = st.columns([6, 1])
+with _hdr_col:
+    st.markdown(f"""
 <div class="main-header">
   <div class="header-left">
     <h1>Monitor de Precios · Aceite de Oliva</h1>
@@ -653,6 +779,10 @@ st.markdown(f"""
   <div class="header-badge">🏷️ Precios de góndola</div>
 </div>
 """, unsafe_allow_html=True)
+with _hdr_btn:
+    if st.button("🔄 Actualizar", key="refresh_header", help="Recargar datos"):
+        st.cache_data.clear()
+        st.rerun()
 
 # ── Notificaciones de favoritos ───────────────────────────────────────────
 _favs = st.session_state.get("favoritos", [])
@@ -725,7 +855,7 @@ for col,(cls,label,val,sub) in zip([c1,c2,c3,c4,c5,c6], kpis):
         </div>""", unsafe_allow_html=True)
 
 # ── TABS ──────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab9, tab10, tab11 = st.tabs([
     "📊  Resumen",
     "🏪  Por Cadena",
     "🏷️  Por Marca",
@@ -733,7 +863,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "🔖  Ofertas",
     "⚖️  Comparativa",
     "🎯  Mi Marca",
-    "💡  Insights",
     "📦  Quiebres",
     "📋  Base",
     "🔢  Tabla dinámica",
@@ -796,381 +925,539 @@ with tab1:
     _of_now_df = pd.DataFrame()
     if _ult1:
         _of_now_df = df_full[
-            (df_full["Periodo"]==_ult1) &
+            (df_full["Fecha"]==df_full["Fecha"].max()) &
             df_full["En_oferta"] &
             df_full["Cadena"].isin(cadenas_sel) &
             (df_full["Gramaje"].isna() | df_full["Gramaje"].isin(gram_sel))
         ].copy()
 
-    # Top 3 ofertas + Zuelo/Oliovita garantizados si tienen oferta
+    # Top 5 ofertas por descuento
     _top_of1: list[dict] = []
+    _dest_of1: list[dict] = []  # ofertas de Zuelo / Oliovita / La Toscana
     if not _of_now_df.empty:
         _of_agg1 = (_of_now_df
                     .groupby(["Cadena","SKU_canonico","Marca_raw"])
                     .agg(desc=("Descuento_pct","max"),
                          pof=("Precio_oferta","min"),
-                         pg =("Precio","mean"))
+                         pg =("Precio","mean"),
+                         url=("Producto_url","first"))
                     .reset_index()
                     .sort_values("desc", ascending=False)
                     .reset_index(drop=True))
-        _top3_1   = _of_agg1.head(3).copy()
-        _in_top3_1 = set(_top3_1["SKU_canonico"])
-        for _mb1 in ("Zuelo","Oliovita"):
-            _mbr1 = _of_agg1[(_of_agg1["Marca_raw"]==_mb1) &
-                               (~_of_agg1["SKU_canonico"].isin(_in_top3_1))]
-            if not _mbr1.empty:
-                _top3_1 = pd.concat([_top3_1, _mbr1.head(1)], ignore_index=True)
-                _in_top3_1.add(_mbr1.iloc[0]["SKU_canonico"])
-        _top_of1 = _top3_1.to_dict("records")
+        _top_of1  = _of_agg1.head(3).to_dict("records")
+        _dest_of1 = (_of_agg1[_of_agg1["Marca_raw"].isin({"Zuelo","Oliovita","La Toscana"})]
+                     .to_dict("records"))
 
-    if _cambios1 or _top_of1:
-        _lbl1 = _ult1 or ""
-        st.markdown(f"""
-        <div style="background:#fff;border-radius:14px;padding:1rem 1.4rem 0.6rem;
-                    box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:1.1rem;
-                    border-top:3px solid #0F3460">
-          <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;
-                      letter-spacing:0.6px;color:#374151;margin-bottom:0.1rem">
-            🔔 Novedades &nbsp;·&nbsp; {_lbl1}
-          </div>
-        </div>""", unsafe_allow_html=True)
-        _cn_l, _cn_r = st.columns(2, gap="large")
+    if _cambios1 or _top_of1 or _dest_of1:
+        with st.expander("🔔 Novedades", expanded=True):
+            _cn_l, _cn_r, _cn_dest = st.columns([2, 2, 2], gap="large")
 
-        # ── Columna izquierda: cambios de precio ──────────────────────────
-        with _cn_l:
-            st.markdown('<div class="chart-note">📊 Cambios de precio vs semana anterior</div>',
-                        unsafe_allow_html=True)
-            if not _cambios1:
-                st.markdown(
-                    '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
-                    'Sin cambios significativos de precio esta semana.</div>',
-                    unsafe_allow_html=True)
-            else:
-                for _c1 in _cambios1[:8]:
-                    _arr1 = "▲" if _c1["pct"] > 0 else "▼"
-                    _clr1 = "#EF4444" if _c1["pct"] > 0 else "#16A34A"
-                    st.markdown(f"""
-                    <div style="display:flex;align-items:center;gap:0.8rem;
-                                background:#FAFAFA;border-radius:9px;
-                                padding:0.55rem 0.85rem;margin-bottom:0.4rem;
-                                border-left:4px solid {_clr1}">
-                      <div style="flex:1;min-width:0">
-                        <div style="font-size:0.77rem;font-weight:700;color:#111827;
-                                    word-break:break-word">{_c1['sku']}</div>
-                        <div style="font-size:0.69rem;color:#6B7280">{_c1['cadena']}</div>
-                      </div>
-                      <div style="text-align:right;white-space:nowrap;flex-shrink:0">
-                        <span style="font-size:0.88rem;font-weight:800;
-                                     color:{_clr1}">{_arr1} {abs(_c1['pct']):.1f}%</span><br>
-                        <span style="font-size:0.68rem;color:#9CA3AF">
-                          ${_c1['viejo']:,.0f} → ${_c1['nuevo']:,.0f}
-                        </span>
-                      </div>
-                    </div>""", unsafe_allow_html=True)
-
-        # ── Columna derecha: top ofertas ───────────────────────────────────
-        with _cn_r:
-            st.markdown('<div class="chart-note">🏷️ Top ofertas activas esta semana</div>',
-                        unsafe_allow_html=True)
-            if not _top_of1:
-                st.markdown(
-                    '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
-                    'Sin ofertas activas esta semana.</div>',
-                    unsafe_allow_html=True)
-            else:
-                _MEDALS = ["🥇","🥈","🥉"]
-                for _i1, _o1 in enumerate(_top_of1):
-                    _is_dest1 = _o1["Marca_raw"] in ("Zuelo","Oliovita")
-                    _bdg1 = ("⭐" if _is_dest1 and _i1 >= 3
-                             else _MEDALS[_i1] if _i1 < 3 else "⭐")
-                    _clr_border1 = (COLORES_CAT.get(_o1["Marca_raw"],"#3B82F6")
-                                    if _is_dest1 else "#3B82F6")
-                    st.markdown(f"""
-                    <div style="background:#FFFFFF;border-radius:10px;
-                                padding:0.8rem 1rem;margin-bottom:0.55rem;
-                                border-left:4px solid {_clr_border1};
-                                box-shadow:0 1px 5px rgba(0,0,0,0.08)">
-                      <div style="font-size:0.82rem;font-weight:700;color:#111827;
-                                  margin-bottom:0.5rem;line-height:1.3">
-                        {_bdg1} {_o1['SKU_canonico'][:55]}
-                      </div>
-                      <div style="display:flex;gap:1.8rem;flex-wrap:wrap;
-                                  align-items:flex-end">
-                        <div>
-                          <div style="font-size:0.65rem;color:#374151;
-                                      text-transform:uppercase;letter-spacing:0.5px">
-                            Precio oferta
-                          </div>
-                          <div style="font-size:1.15rem;font-weight:800;color:#111827">
-                            ${_o1['pof']:,.0f}
-                          </div>
-                        </div>
-                        <div>
-                          <div style="font-size:0.65rem;color:#374151;
-                                      text-transform:uppercase;letter-spacing:0.5px">
-                            Precio góndola
-                          </div>
-                          <div style="font-size:1.15rem;font-weight:800;color:#111827">
-                            ${_o1['pg']:,.0f}
-                          </div>
-                        </div>
-                        <div>
-                          <div style="font-size:0.65rem;color:#374151;
-                                      text-transform:uppercase;letter-spacing:0.5px">
-                            Descuento
-                          </div>
-                          <div style="font-size:1.15rem;font-weight:800;color:#111827">
-                            -{_o1['desc']:.0f}%
-                          </div>
-                        </div>
-                      </div>
-                      <div style="font-size:0.71rem;color:#374151;margin-top:0.45rem">
-                        🏪 {_o1['Cadena']} &nbsp;·&nbsp; {_ult1}
-                      </div>
-                    </div>""", unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Gráficos principales ─────────────────────────────────────────────
-    _fc1, _ = st.columns([2, 5])
-    with _fc1:
-        dff1, _ = gram_filter("gram_tab1")
-
-    col_l, col_r = st.columns([3, 2], gap="large")
-
-    with col_l:
-        st.markdown('<div class="chart-title">Precio de góndola promedio por cadena</div>',
-                    unsafe_allow_html=True)
-        df_c = (dff1.groupby("Cadena")["Precio"].mean()
-                    .reset_index().sort_values("Precio"))
-        fig = hbar(
-            df_x=df_c["Precio"].tolist(),
-            df_y=df_c["Cadena"].tolist(),
-            colores=[cc(c) for c in df_c["Cadena"]],
-            textos=[f"${v:,.0f}" for v in df_c["Precio"]],
-            titulo_x="Precio promedio ($)",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_r:
-        st.markdown('<div class="chart-title">Productos por cadena</div>',
-                    unsafe_allow_html=True)
-        df_pie = dff1.groupby("Cadena").size().reset_index(name="n")
-        fig = go.Figure(go.Pie(
-            labels=df_pie["Cadena"], values=df_pie["n"],
-            marker_colors=[cc(c) for c in df_pie["Cadena"]],
-            hole=0.55, textinfo="label+percent",
-            textposition="outside",
-            textfont=dict(size=12, color="#111827"),
-        ))
-        fig.update_layout(**_BASE_CORE, height=320,
-                          margin=dict(l=10,r=10,t=40,b=40),
-                          showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
-
-    # Box distribución por cadena — IQR estándar, escala enfocada
-    st.markdown('<div class="chart-title">Distribución de precios de góndola por cadena</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="chart-note">Caja = rango intercuartil (Q1–Q3) · Línea central = mediana · Bigotes = 1.5×IQR</div>',
-                unsafe_allow_html=True)
-    _precios_box = dff1["Precio"].dropna()
-    _p10 = float(_precios_box.quantile(0.10)) if not _precios_box.empty else 0
-    _p90 = float(_precios_box.quantile(0.90)) if not _precios_box.empty else 30000
-    fig = go.Figure()
-    for cadena in sorted(dff1["Cadena"].unique()):
-        sub = dff1[dff1["Cadena"]==cadena]["Precio"].dropna()
-        if sub.empty:
-            continue
-        fig.add_trace(go.Box(
-            y=sub, name=cadena, marker_color=cc(cadena),
-            boxmean=True,
-            line_width=2,
-            marker=dict(size=4, opacity=0.4),
-        ))
-    fig.update_layout(**BASE, height=420,
-                      yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
-                                 tickfont=dict(size=12,color="#111827"),
-                                 range=[max(0, _p10 * 0.7), _p90 * 1.25]),
-                      xaxis=dict(tickfont=dict(size=13,color="#111827")),
-                      showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ── Movimientos de catálogo ───────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="chart-title">🆕 Movimientos de catálogo</div>', unsafe_allow_html=True)
-
-    _mov_fechas_ord = sorted(df_full["Fecha"].unique())
-
-    _mov_fa, _mov_fb, _mov_fc, _ = st.columns([2, 2, 2, 1])
-    with _mov_fa:
-        _mov_gran = st.selectbox("Granularidad", ["Semanal", "Mensual"], key="mov_gran")
-
-    if _mov_gran == "Semanal":
-        _mov_opciones = _mov_fechas_ord
-        _mov_fmt = lambda f: pd.Timestamp(f).strftime("%d/%m/%Y")
-    else:
-        _meses_vistos: dict = {}
-        for _mf in _mov_fechas_ord:
-            _mk = pd.Timestamp(_mf).strftime("%b %Y")
-            if _mk not in _meses_vistos:
-                _meses_vistos[_mk] = _mf
-        _mov_opciones = list(_meses_vistos.values())
-        _mov_fmt = lambda f: pd.Timestamp(f).strftime("%b %Y")
-
-    _mov_labels = [_mov_fmt(f) for f in _mov_opciones]
-
-    if len(_mov_opciones) < 2:
-        st.info("Se necesitan al menos 2 períodos de datos para este análisis.")
-    else:
-        with _mov_fb:
-            _mov_ini_lbl = st.selectbox("Desde", _mov_labels, index=0, key="mov_ini")
-        with _mov_fc:
-            _mov_fin_lbl = st.selectbox("Hasta", _mov_labels,
-                                         index=len(_mov_labels)-1, key="mov_fin")
-
-        _mov_ini_f = _mov_opciones[_mov_labels.index(_mov_ini_lbl)]
-        _mov_fin_f = _mov_opciones[_mov_labels.index(_mov_fin_lbl)]
-
-        if _mov_gran == "Mensual":
-            _ini_ts = pd.Timestamp(_mov_ini_f)
-            _fin_ts = pd.Timestamp(_mov_fin_f)
-            _ff_ini = [f for f in _mov_fechas_ord
-                       if pd.Timestamp(f).year == _ini_ts.year and pd.Timestamp(f).month == _ini_ts.month]
-            _ff_fin = [f for f in _mov_fechas_ord
-                       if pd.Timestamp(f).year == _fin_ts.year and pd.Timestamp(f).month == _fin_ts.month]
-            _f_pri_mov = min(_ff_ini) if _ff_ini else _mov_ini_f
-            _f_ult_mov = max(_ff_fin) if _ff_fin else _mov_fin_f
-        else:
-            _f_pri_mov, _f_ult_mov = _mov_ini_f, _mov_fin_f
-
-        st.markdown(
-            f"<div class='chart-note'>Comparando snapshot de <b>{_mov_fmt(_f_pri_mov)}</b> "
-            f"vs <b>{_mov_fmt(_f_ult_mov)}</b></div>",
-            unsafe_allow_html=True)
-
-        if _f_pri_mov == _f_ult_mov:
-            st.info("El período de inicio y fin son iguales. Elegí períodos distintos.")
-        else:
-            _skus_primera = set(zip(df_full[df_full["Fecha"]==_f_pri_mov]["SKU_canonico"],
-                                     df_full[df_full["Fecha"]==_f_pri_mov]["Cadena"]))
-            _skus_ultima  = set(zip(df_full[df_full["Fecha"]==_f_ult_mov]["SKU_canonico"],
-                                     df_full[df_full["Fecha"]==_f_ult_mov]["Cadena"]))
-
-            _entradas_mov = sorted([{"SKU": s, "Cadena": c,
-                                       "Primera vez visto": pd.Timestamp(_f_ult_mov).strftime("%d/%m/%Y")}
-                                      for s,c in _skus_ultima - _skus_primera],
-                                     key=lambda x: x["SKU"])[:20]
-            _salidas_mov  = sorted([{"SKU": s, "Cadena": c,
-                                       "Última vez visto": pd.Timestamp(_f_pri_mov).strftime("%d/%m/%Y")}
-                                      for s,c in _skus_primera - _skus_ultima],
-                                     key=lambda x: x["SKU"])[:20]
-
-            _cmov_l, _cmov_r = st.columns(2, gap="large")
-            with _cmov_l:
-                st.markdown(f"<span style='color:#16A34A;font-weight:700;font-size:0.85rem'>"
-                            f"✅ Entradas ({len(_entradas_mov)})</span>",
+            # ── Columna izquierda: cambios de precio ──────────────────────────
+            with _cn_l:
+                st.markdown('<div class="chart-note">📊 Cambios de precio vs semana anterior</div>',
                             unsafe_allow_html=True)
-                if _entradas_mov:
-                    st.dataframe(pd.DataFrame(_entradas_mov), use_container_width=True,
-                                 height=min(400, len(_entradas_mov)*38+60), hide_index=True)
+                if not _cambios1:
+                    st.markdown(
+                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
+                        'Sin cambios significativos de precio esta semana.</div>',
+                        unsafe_allow_html=True)
                 else:
-                    st.info("Sin entradas en este período.")
-            with _cmov_r:
-                st.markdown(f"<span style='color:#DC2626;font-weight:700;font-size:0.85rem'>"
-                            f"❌ Salidas ({len(_salidas_mov)})</span>",
+                    for _c1 in _cambios1[:8]:
+                        _arr1 = "▲" if _c1["pct"] > 0 else "▼"
+                        _clr1 = "#EF4444" if _c1["pct"] > 0 else "#16A34A"
+                        st.markdown(f"""
+                        <div style="display:flex;align-items:center;gap:0.8rem;
+                                    background:#FAFAFA;border-radius:9px;
+                                    padding:0.55rem 0.85rem;margin-bottom:0.4rem;
+                                    border-left:4px solid {_clr1}">
+                          <div style="flex:1;min-width:0">
+                            <div style="font-size:0.77rem;font-weight:700;color:#111827;
+                                        word-break:break-word">{_c1['sku']}</div>
+                            <div style="font-size:0.69rem;color:#6B7280">{_c1['cadena']}</div>
+                          </div>
+                          <div style="text-align:right;white-space:nowrap;flex-shrink:0">
+                            <span style="font-size:0.88rem;font-weight:800;
+                                         color:{_clr1}">{_arr1} {abs(_c1['pct']):.1f}%</span><br>
+                            <span style="font-size:0.68rem;color:#9CA3AF">
+                              ${_c1['viejo']:,.0f} → ${_c1['nuevo']:,.0f}
+                            </span>
+                          </div>
+                        </div>""", unsafe_allow_html=True)
+
+            # ── Columna derecha: top ofertas ───────────────────────────────────
+            with _cn_r:
+                st.markdown('<div class="chart-note">🏷️ Top ofertas activas esta semana</div>',
                             unsafe_allow_html=True)
-                if _salidas_mov:
-                    st.dataframe(pd.DataFrame(_salidas_mov), use_container_width=True,
-                                 height=min(400, len(_salidas_mov)*38+60), hide_index=True)
+                if not _top_of1:
+                    st.markdown(
+                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
+                        'Sin ofertas activas esta semana.</div>',
+                        unsafe_allow_html=True)
                 else:
-                    st.info("Sin salidas en este período.")
+                    _fecha_max = df_full["Fecha"].max()
+                    _MEDALS = ["🥇","🥈","🥉"]
+                    for _i1, _o1 in enumerate(_top_of1):
+                        _is_dest1 = _o1["Marca_raw"] in ("Zuelo","Oliovita")
+                        _bdg1 = ("⭐" if _is_dest1 and _i1 >= 3
+                                 else _MEDALS[_i1] if _i1 < 3 else "⭐")
+                        _clr_border1 = (COLORES_CAT.get(_o1["Marca_raw"],"#3B82F6")
+                                        if _is_dest1 else "#3B82F6")
+                        # Calcular desde cuándo está activa la oferta
+                        _of_hist = df_full[
+                            (df_full["SKU_canonico"] == _o1["SKU_canonico"]) &
+                            (df_full["Cadena"] == _o1["Cadena"]) &
+                            df_full["En_oferta"]
+                        ]["Fecha"].drop_duplicates().sort_values()
+                        # Encontrar la racha continua que llega hasta fecha_max
+                        _all_dates = sorted(df_full["Fecha"].unique())
+                        _of_dates  = sorted(_of_hist.tolist())
+                        _run_start = _fecha_max
+                        for _d in reversed(_all_dates):
+                            if _d in _of_dates:
+                                _run_start = _d
+                            elif _d < _fecha_max:
+                                break
+                        if _run_start == _fecha_max:
+                            _dur_str = f"Activa desde {_fecha_max.strftime('%d/%m')}"
+                        else:
+                            _dur_str = f"Del {_run_start.strftime('%d/%m')} al {_fecha_max.strftime('%d/%m')}"
+
+                        _o1_url_raw = _o1.get("url")
+                        _o1_url = (_o1_url_raw if (isinstance(_o1_url_raw, str)
+                                   and _o1_url_raw.startswith("http")) else "")
+                        _o1_link_open  = f'<a href="{_o1_url}" target="_blank" style="text-decoration:none;display:block">' if _o1_url else ""
+                        _o1_link_close = "</a>" if _o1_url else ""
+                        _ver_link = (f'&nbsp;<a href="{_o1_url}" target="_blank" '
+                                     f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
+                                     if _o1_url else "")
+                        st.markdown(f"""
+                        {_o1_link_open}<div style="background:#FFFFFF;border-radius:8px;
+                                    padding:0.55rem 0.75rem;margin-bottom:0.4rem;
+                                    border-left:3px solid {_clr_border1};
+                                    box-shadow:0 1px 4px rgba(0,0,0,0.07)">
+                          <div style="font-size:0.75rem;font-weight:700;color:#111827;
+                                      margin-bottom:0.35rem;line-height:1.25">
+                            {_bdg1} {_o1['SKU_canonico'][:55]}
+                          </div>
+                          <div style="display:flex;gap:1.2rem;align-items:flex-end">
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Precio oferta</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_o1['pof']:,.0f}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Góndola</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_o1['pg']:,.0f}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Dto.</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#DC2626">-{_o1['desc']:.0f}%</div>
+                            </div>
+                          </div>
+                          <div style="font-size:0.65rem;color:#374151;margin-top:0.3rem">
+                            🏪 {_o1['Cadena']} &nbsp;·&nbsp; 🗓️ {_dur_str}{_ver_link}
+                          </div>
+                        </div>{_o1_link_close}""", unsafe_allow_html=True)
+
+            # ── Columna derecha: ofertas Zuelo / Oliovita / La Toscana ────────
+            with _cn_dest:
+                st.markdown('<div class="chart-note">⭐ Zuelo · Oliovita · La Toscana</div>',
+                            unsafe_allow_html=True)
+                if not _dest_of1:
+                    st.markdown(
+                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
+                        'Sin ofertas activas para estas marcas.</div>',
+                        unsafe_allow_html=True)
+                else:
+                    _COLORES_DEST = {"Zuelo":"#0F3460","Oliovita":"#16A34A","La Toscana":"#B45309"}
+                    for _od in _dest_of1:
+                        _clr_d = _COLORES_DEST.get(_od["Marca_raw"], "#3B82F6")
+                        # Duración de la oferta (misma lógica que columna izquierda)
+                        _od_hist = df_full[
+                            (df_full["SKU_canonico"] == _od["SKU_canonico"]) &
+                            (df_full["Cadena"] == _od["Cadena"]) &
+                            df_full["En_oferta"]
+                        ]["Fecha"].drop_duplicates().sort_values()
+                        _od_dates = sorted(_od_hist.tolist())
+                        _od_run_start = _fecha_max
+                        for _d in reversed(_all_dates):
+                            if _d in _od_dates:
+                                _od_run_start = _d
+                            elif _d < _fecha_max:
+                                break
+                        if _od_run_start == _fecha_max:
+                            _od_dur = f"Activa desde {_fecha_max.strftime('%d/%m')}"
+                        else:
+                            _od_dur = f"Del {_od_run_start.strftime('%d/%m')} al {_fecha_max.strftime('%d/%m')}"
+                        _od_url_raw = _od.get("url")
+                        _od_url = (_od_url_raw if (isinstance(_od_url_raw, str)
+                                   and _od_url_raw.startswith("http")) else "")
+                        _od_link_open  = f'<a href="{_od_url}" target="_blank" style="text-decoration:none;display:block">' if _od_url else ""
+                        _od_link_close = "</a>" if _od_url else ""
+                        _od_ver = (f'&nbsp;<a href="{_od_url}" target="_blank" '
+                                   f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
+                                   if _od_url else "")
+                        st.markdown(f"""
+                        {_od_link_open}<div style="background:#FFFFFF;border-radius:8px;
+                                    padding:0.55rem 0.75rem;margin-bottom:0.4rem;
+                                    border-left:3px solid {_clr_d};
+                                    box-shadow:0 1px 4px rgba(0,0,0,0.07)">
+                          <div style="font-size:0.75rem;font-weight:700;color:#111827;
+                                      margin-bottom:0.35rem;line-height:1.25">
+                            ⭐ {_od['SKU_canonico'][:55]}
+                          </div>
+                          <div style="display:flex;gap:1.2rem;align-items:flex-end">
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Precio oferta</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_od['pof']:,.0f}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Góndola</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_od['pg']:,.0f}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:0.58rem;color:#374151;
+                                          text-transform:uppercase;letter-spacing:0.4px">Dto.</div>
+                              <div style="font-size:0.95rem;font-weight:800;color:#DC2626">-{_od['desc']:.0f}%</div>
+                            </div>
+                          </div>
+                          <div style="font-size:0.65rem;color:#374151;margin-top:0.3rem">
+                            🏪 {_od['Cadena']} &nbsp;·&nbsp; 🗓️ {_od_dur}{_od_ver}
+                          </div>
+                        </div>{_od_link_close}""", unsafe_allow_html=True)
+
+    # ── Insights compactos ────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("💡 Insights del mercado", expanded=True):
+        def _insight_card(icon, titulo, valor, detalle, color="#0F3460"):
+            st.markdown(f"""
+            <div style="background:#FFFFFF;border-radius:12px;padding:0.9rem 1.1rem;
+                        border-left:4px solid {color};
+                        box-shadow:0 1px 6px rgba(0,0,0,0.07)">
+              <div style="font-size:1.2rem;margin-bottom:0.2rem">{icon}</div>
+              <div style="font-size:0.65rem;color:#6B7280;text-transform:uppercase;
+                          letter-spacing:0.5px;margin-bottom:0.12rem">{titulo}</div>
+              <div style="font-size:1.05rem;font-weight:800;color:#111827;
+                          line-height:1.2;margin-bottom:0.18rem">{valor}</div>
+              <div style="font-size:0.71rem;color:#374151;line-height:1.4">{detalle}</div>
+            </div>""", unsafe_allow_html=True)
+
+        _ins = dff.copy()
+        _ins_pl = _ins.dropna(subset=["Precio_litro"])
+        _by_marca_ins = (_ins.groupby("Marca_raw").agg(
+            precio_medio=("Precio","mean"), n=("Precio","count"),
+        ).reset_index())
+        _pl_s1i = (_ins_pl.groupby(["Marca_raw","SKU_canonico","Cadena"])["Precio_litro"].mean().reset_index())
+        _pl_s2i = (_pl_s1i.groupby(["Marca_raw","SKU_canonico"])["Precio_litro"].mean().reset_index())
+        _by_marca_pli = (_pl_s2i.groupby("Marca_raw")["Precio_litro"].mean().reset_index().rename(columns={"Precio_litro":"pl_medio"}))
+        _by_marca_ins = _by_marca_ins.merge(_by_marca_pli, on="Marca_raw", how="left")
+        _of_ins_r = (df_full[df_full["Cadena"].isin(cadenas_sel)]
+                     .groupby("Marca_raw")["En_oferta"].apply(lambda d: d.mean()*100)
+                     .reset_index(name="pct_oferta"))
+        _by_marca_ins = _by_marca_ins.merge(_of_ins_r, on="Marca_raw", how="left")
+        _cad_pl_i = (_ins_pl.groupby(["Cadena","SKU_canonico"])["Precio_litro"].mean().reset_index()
+                     .groupby("Cadena")["Precio_litro"].mean().reset_index(name="pl_medio"))
+        _cadena_barata_i = _cad_pl_i.sort_values("pl_medio").iloc[0] if not _cad_pl_i.empty else None
+        _cadena_cara_i   = _cad_pl_i.sort_values("pl_medio").iloc[-1] if not _cad_pl_i.empty else None
+        _marca_of_i = (_by_marca_ins[_by_marca_ins["Marca_raw"].isin(MARCAS_DESTACADAS)]
+                       .dropna(subset=["pct_oferta"]).sort_values("pct_oferta", ascending=False))
+        _sku_por_marca = (_ins.groupby("Marca_raw")["SKU_canonico"].nunique()
+                          .reset_index(name="n_skus").sort_values("n_skus", ascending=False))
+        _sku_cad2 = (_ins.groupby("Marca_raw")["Cadena"].nunique()
+                     .reset_index(name="n_cad").sort_values("n_cad", ascending=False))
+        _marca_mas_skus_i = _sku_por_marca.iloc[0] if not _sku_por_marca.empty else None
+        _marca_mas_cad_i  = _sku_cad2.iloc[0]      if not _sku_cad2.empty else None
+
+        st.markdown('<div class="chart-title">📦 Portfolio activo &nbsp;·&nbsp; 🏬 Cadenas</div>', unsafe_allow_html=True)
+        _ri1a, _ri1b, _ri1c, _ri1d = st.columns(4, gap="medium")
+        with _ri1a:
+            if _marca_mas_skus_i is not None:
+                _insight_card("📦","Marca con más SKUs activos", str(_marca_mas_skus_i["Marca_raw"])[:40],
+                              f"{int(_marca_mas_skus_i['n_skus'])} SKUs distintos","#0F3460")
+        with _ri1b:
+            if _marca_mas_cad_i is not None:
+                _insight_card("🌐","Marca con más presencia", str(_marca_mas_cad_i["Marca_raw"])[:40],
+                              f"activa en {int(_marca_mas_cad_i['n_cad'])} cadenas","#7C3AED")
+        with _ri1c:
+            if _cadena_barata_i is not None:
+                _insight_card("✅","Cadena más barata", _cadena_barata_i["Cadena"],
+                              f"${_cadena_barata_i['pl_medio']:,.0f}/L promedio","#16A34A")
+        with _ri1d:
+            if _cadena_cara_i is not None:
+                _insight_card("🏅","Cadena más cara", _cadena_cara_i["Cadena"],
+                              f"${_cadena_cara_i['pl_medio']:,.0f}/L promedio","#7C3AED")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="chart-title">🏷️ Marcas &nbsp;·&nbsp; 🔥 Ofertas</div>', unsafe_allow_html=True)
+        _ri2a, _ri2b, _ri2c, _ri2d = st.columns(4, gap="medium")
+        _g500 = (_ins_pl[_ins_pl["Gramaje"]=="500 ml"]
+                 .groupby(["SKU_canonico","Cadena"])["Precio_litro"].mean().reset_index()
+                 .groupby("SKU_canonico").agg(pl=("Precio_litro","mean"), n=("Cadena","count"))
+                 .reset_index().sort_values("pl"))
+        _b500_i = _g500.iloc[0]  if not _g500.empty else None
+        _c500_i = _g500.iloc[-1] if not _g500.empty else None
+        with _ri2a:
+            if _b500_i is not None:
+                _insight_card("🏆","Más barato 500 ml", _b500_i["SKU_canonico"][:40],
+                              f"${_b500_i['pl']:,.0f}/L · {int(_b500_i['n'])} cadena(s)","#16A34A")
+        with _ri2b:
+            if _c500_i is not None:
+                _insight_card("💎","Más caro 500 ml", _c500_i["SKU_canonico"][:40],
+                              f"${_c500_i['pl']:,.0f}/L · {int(_c500_i['n'])} cadena(s)","#7C3AED")
+        with _ri2c:
+            if not _marca_of_i.empty:
+                _mo_i = _marca_of_i.iloc[0]
+                _insight_card("🔥","Marca con más descuentos", _mo_i["Marca_raw"],
+                              f"{_mo_i['pct_oferta']:.0f}% de registros en oferta","#DC2626")
+        with _ri2d:
+            _cad_of_i = (df_full[df_full["Cadena"].isin(cadenas_sel)]
+                         .groupby("Cadena")["En_oferta"].apply(lambda d: d.mean()*100)
+                         .reset_index(name="pct").sort_values("pct", ascending=False))
+            if not _cad_of_i.empty:
+                _co_i = _cad_of_i.iloc[0]
+                _insight_card("🏪","Cadena con más ofertas", _co_i["Cadena"],
+                              f"{_co_i['pct']:.0f}% de sus productos en oferta","#B45309")
+
+    # ── Notificaciones: cambios de precio semana a semana ─────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    _notif_fechas = sorted(df_full["Fecha"].unique())
+    if len(_notif_fechas) >= 2:
+        _fn_act = _notif_fechas[-1]
+        # Buscar el scrape más cercano a 7 días atrás (semana a semana)
+        _target_ant = pd.Timestamp(_fn_act) - pd.Timedelta(days=7)
+        _fn_ant = min(_notif_fechas[:-1], key=lambda f: abs(pd.Timestamp(f) - _target_ant))
+        _fn_ant_str = pd.Timestamp(_fn_ant).strftime("%d/%m/%Y")
+        _fn_act_str = pd.Timestamp(_fn_act).strftime("%d/%m/%Y")
+
+        _df_ant = df_full[df_full["Fecha"] == _fn_ant]
+        _df_act = df_full[df_full["Fecha"] == _fn_act]
+        _ant_tiene_pid = (_df_ant["Producto_key"] != _df_ant["Producto"]).any()
+        _act_tiene_pid = (_df_act["Producto_key"] != _df_act["Producto"]).any()
+        _KEY = ["Producto_key", "Cadena"] if (_ant_tiene_pid and _act_tiene_pid) else ["Producto", "Cadena"]
+        _DISP_KEY = "Producto_key" if _KEY[0] == "Producto_key" else "Producto"
+        _gond_ant = (_df_ant[~_df_ant["En_oferta"]]
+                     [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
+                     .rename(columns={"Precio": "p_ant"}))
+        _act_extra = [c for c in ["Precio", "Marca_raw", "Producto", "Producto_url"] if c not in _KEY]
+        _gond_act = (_df_act[~_df_act["En_oferta"]]
+                     [_KEY + _act_extra].drop_duplicates(subset=_KEY)
+                     .rename(columns={"Precio": "p_act"}))
+
+        _cambios = (_gond_ant.merge(_gond_act, on=_KEY + ["Marca_raw"])
+                    .assign(delta=lambda d: d["p_act"] - d["p_ant"],
+                            delta_pct=lambda d: ((d["p_act"] / d["p_ant"]) - 1) * 100)
+                    .query("delta != 0")
+                    .sort_values("delta_pct"))
+
+        _subas = _cambios[_cambios["delta"] > 0].sort_values("delta_pct", ascending=False)
+        _bajas_all      = _cambios[_cambios["delta"] < 0].sort_values("delta_pct")
+        _bajas          = _bajas_all[_bajas_all["delta_pct"] >= -15]
+        _bajas_verificar = _bajas_all[_bajas_all["delta_pct"] < -15]
+
+        _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
+                       [_KEY].drop_duplicates())
+        _of_extra = [c for c in ["Precio", "Precio_oferta", "Descuento_pct", "Producto", "Producto_url"] if c not in _KEY]
+        _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
+                       .drop_duplicates(subset=_KEY)
+                       [_KEY + _of_extra]
+                       .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",
+                                        "Descuento_pct": "desc"}))
+        _nuevas_of = _con_of_act.merge(_sin_of_ant, on=_KEY, how="inner")
+
+        _total    = len(_cambios)
+        _total_of = len(_con_of_act)
+        _total_ver = len(_bajas_verificar)
+        _hay_algo = _total > 0 or _total_of > 0
+
+        _partes = []
+        if _total > 0:
+            _partes.append(f"{_total} cambio{'s' if _total != 1 else ''} de precio")
+        if _total_of > 0:
+            _partes.append(f"{_total_of} oferta{'s' if _total_of != 1 else ''} activa{'s' if _total_of != 1 else ''}")
+        _label = ("🔔 " + " · ".join(_partes) + f" · {_fn_ant_str} → {_fn_act_str}"
+                  if _hay_algo else
+                  f"✅ Sin cambios de precio · {_fn_ant_str} → {_fn_act_str}")
+
+        def _fila(sku, cadena, flecha, pct_str, p_de, p_a, color_flecha, url=""):
+            _ver = (f'&nbsp;<a href="{url}" target="_blank" '
+                    f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
+                    if (isinstance(url, str) and url.startswith("http")) else "")
+            return (
+                f"<div style='padding:5px 0;border-bottom:1px solid #E5E7EB'>"
+                f"<span style='font-size:0.82rem;color:#111827'>"
+                f"<b style='word-break:break-word'>{sku}</b><br>"
+                f"<span style='color:#6B7280'>{cadena}</span>&nbsp;&nbsp;"
+                f"<span style='color:{color_flecha}'>{flecha} {pct_str}</span>"
+                f"&nbsp;&nbsp;${p_de:,.0f} → <b>${p_a:,.0f}</b>"
+                f"{_ver}"
+                f"</span></div>"
+            )
+
+        def _titulo_col(emoji, texto, n, subtitulo=None):
+            sub = subtitulo if subtitulo is not None else f"{_fn_ant_str} → {_fn_act_str}"
+            st.markdown(
+                f"<p style='font-size:0.95rem;font-weight:700;color:#111827;margin:0 0 4px 0'>"
+                f"{emoji} {texto} ({n})</p>"
+                f"<p style='font-size:0.75rem;color:#6B7280;margin:0 0 8px 0'>"
+                f"{sub}</p>",
+                unsafe_allow_html=True)
+
+        with st.expander(_label, expanded=_hay_algo):
+            if not _hay_algo:
+                st.info("Ningún cambio detectado entre las últimas dos semanas.")
+            else:
+                _col_s, _col_b, _col_o = st.columns(3, gap="large")
+                with _col_s:
+                    _titulo_col("🔴", "Subas", len(_subas))
+                    if _subas.empty:
+                        st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna suba.</span>", unsafe_allow_html=True)
+                    for _, r in _subas.head(3).iterrows():
+                        st.markdown(_fila(r["Producto"], r["Cadena"], "▲",
+                                          f"{r['delta_pct']:+.1f}%",
+                                          r["p_ant"], r["p_act"], "#DC2626"),
+                                    unsafe_allow_html=True)
+                with _col_b:
+                    _titulo_col("🟢", "Bajas de góndola", len(_bajas))
+                    if _bajas.empty:
+                        st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna baja confirmada.</span>", unsafe_allow_html=True)
+                    for _, r in _bajas.head(3).iterrows():
+                        st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
+                                          f"{r['delta_pct']:+.1f}%",
+                                          r["p_ant"], r["p_act"], "#16A34A"),
+                                    unsafe_allow_html=True)
+                with _col_o:
+                    _n_of_total = len(_con_of_act) + len(_bajas_verificar)
+                    _titulo_col("🏷️", "Ofertas activas", _n_of_total, subtitulo="")
+                    # Unificar y ordenar todo por descuento mayor a menor
+                    _of_unif = []
+                    for _, r in _con_of_act.iterrows():
+                        _of_unif.append({
+                            "Producto": r["Producto"], "Cadena": r["Cadena"],
+                            "pct": float(r["desc"]), "pct_str": f"{r['desc']:.0f}% dto.",
+                            "p_de": r["p_gond"], "p_a": r["p_of"],
+                            "url": r.get("Producto_url", ""),
+                        })
+                    for _, r in _bajas_verificar.iterrows():
+                        _of_unif.append({
+                            "Producto": r["Producto"], "Cadena": r["Cadena"],
+                            "pct": abs(float(r["delta_pct"])), "pct_str": f"{r['delta_pct']:+.1f}%",
+                            "p_de": r["p_ant"], "p_a": r["p_act"],
+                            "url": r.get("Producto_url", ""),
+                        })
+                    _of_unif.sort(key=lambda x: x["pct"], reverse=True)
+                    if not _of_unif:
+                        st.markdown("<span style='color:#111827;font-size:0.82rem'>Sin ofertas activas.</span>", unsafe_allow_html=True)
+                    for _oi in _of_unif:
+                        st.markdown(_fila(_oi["Producto"], _oi["Cadena"], "▼",
+                                          _oi["pct_str"], _oi["p_de"], _oi["p_a"],
+                                          "#B45309", _oi["url"]),
+                                    unsafe_allow_html=True)
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 2 · POR CADENA
 # ══════════════════════════════════════════════════════════════════════════
 with tab2:
-    _fc2, _ = st.columns([2, 5])
-    with _fc2:
+    _fc2a, _fc2b, _ = st.columns([2, 2, 3])
+    with _fc2a:
         dff2, _ = gram_filter("gram_tab2")
+    with _fc2b:
+        _cadenas2_opts = ["Todas las cadenas"] + sorted(dff2["Cadena"].unique().tolist())
+        _cadena2_sel = st.selectbox("🏪 Cadena", _cadenas2_opts, key="cadena_tab2")
+    if _cadena2_sel != "Todas las cadenas":
+        dff2 = dff2[dff2["Cadena"] == _cadena2_sel].copy()
 
-    st.markdown('<div class="chart-title">Precio de góndola promedio — Cadena × Marca</div>',
-                unsafe_allow_html=True)
-    pivot = (dff2.groupby(["Marca","Cadena"])["Precio"]
-                 .mean().round(0).unstack("Cadena"))
-    pivot = pivot.reindex([c for c in orden_cats if c in pivot.index])
-    if not pivot.empty:
-        text_vals = [[f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
-                     for row in pivot.values]
-        fig = go.Figure(go.Heatmap(
-            z=pivot.values, x=pivot.columns.tolist(), y=pivot.index.tolist(),
-            colorscale="RdYlGn_r",
-            text=text_vals, texttemplate="%{text}",
-            textfont=dict(size=12, color="#111827"),
-            colorbar=dict(title="$", tickprefix="$", tickformat=","),
-        ))
-        fig.update_layout(**BASE, height=max(320, len(pivot)*48+80),
-                          xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
-                          yaxis=dict(tickfont=dict(size=13,color="#111827")))
-        st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Precio promedio & Productos por cadena", expanded=True):
+        col_l, col_r = st.columns([3, 2], gap="large")
 
-    st.markdown('<div class="chart-title">Precio de góndola mínimo por cadena y marca</div>',
-                unsafe_allow_html=True)
-    df_min = dff2.groupby(["Marca","Cadena"])["Precio"].min().reset_index()
-    df_min["Marca"] = pd.Categorical(df_min["Marca"], categories=orden_cats, ordered=True)
-    df_min = df_min.sort_values("Marca")
-    fig = px.bar(df_min, x="Marca", y="Precio", color="Cadena",
-                 barmode="group", color_discrete_map=COLORS_CADENAS,
-                 labels={"Precio":"Precio mínimo ($)","Marca":""},
-                 height=420, category_orders={"Marca": orden_cats})
-    fig.update_layout(**BASE,
-                      yaxis=dict(tickprefix="$", tickformat=",",
-                                 tickfont=dict(size=12,color="#111827")),
-                      xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
-    st.plotly_chart(fig, use_container_width=True)
+        with col_l:
+            df_c = (dff2.groupby("Cadena")["Precio"].mean()
+                        .reset_index().sort_values("Precio"))
+            fig = hbar(
+                df_x=df_c["Precio"].tolist(),
+                df_y=df_c["Cadena"].tolist(),
+                colores=[cc(c) for c in df_c["Cadena"]],
+                textos=[f"${v:,.0f}" for v in df_c["Precio"]],
+                titulo_x="Precio promedio ($)",
+            )
+            st.plotly_chart(fig)
 
-    # ── Share of shelf implícito ──────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="chart-title">Share of shelf implícito por cadena</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="chart-note">% de SKUs de cada marca sobre el total de SKUs de la categoría en cada cadena</div>',
-                unsafe_allow_html=True)
+        with col_r:
+            df_pie = dff2.groupby("Cadena").size().reset_index(name="n")
+            fig = go.Figure(go.Pie(
+                labels=df_pie["Cadena"], values=df_pie["n"],
+                marker_colors=[cc(c) for c in df_pie["Cadena"]],
+                hole=0.55, textinfo="label+percent",
+                textposition="outside",
+                textfont=dict(size=12, color="#111827"),
+            ))
+            fig.update_layout(**_BASE_CORE, height=320,
+                              margin=dict(l=10,r=10,t=40,b=40),
+                              showlegend=False)
+            st.plotly_chart(fig)
 
-    _shelf_src = df_full[df_full["Cadena"].isin(cadenas_sel)].copy()
-    _shelf_src["Marca_shelf"] = _shelf_src["Marca"].apply(
-        lambda m: m if m in (MARCAS_DESTACADAS | {"Regionales/Import.", "Marca Propia"}) else "Otras"
-    )
-    _total_skus_cad = (_shelf_src.groupby("Cadena")["SKU_canonico"]
-                       .nunique().reset_index(name="total"))
-    _skus_marca_cad = (_shelf_src.groupby(["Cadena","Marca_shelf"])["SKU_canonico"]
-                       .nunique().reset_index(name="n_skus"))
-    _shelf = _skus_marca_cad.merge(_total_skus_cad, on="Cadena")
-    _shelf["share_pct"] = _shelf["n_skus"] / _shelf["total"] * 100
+    # Box distribución por cadena — IQR estándar, escala enfocada
+    with st.expander("Distribución de precios de góndola por cadena", expanded=True):
+        st.markdown('<div class="chart-note">Caja = rango intercuartil (Q1–Q3) · Línea central = mediana · Bigotes = 1.5×IQR</div>',
+                    unsafe_allow_html=True)
+        _precios_box = dff2["Precio"].dropna()
+        _p10 = float(_precios_box.quantile(0.10)) if not _precios_box.empty else 0
+        _p90 = float(_precios_box.quantile(0.90)) if not _precios_box.empty else 30000
+        fig = go.Figure()
+        for cadena in sorted(dff2["Cadena"].unique()):
+            sub = dff2[dff2["Cadena"]==cadena]["Precio"].dropna()
+            if sub.empty:
+                continue
+            fig.add_trace(go.Box(
+                y=sub, name=cadena, marker_color=cc(cadena),
+                boxmean=True,
+                line_width=2,
+                marker=dict(size=4, opacity=0.4),
+            ))
+        fig.update_layout(**BASE, height=420,
+                          yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
+                                     tickfont=dict(size=12,color="#111827"),
+                                     range=[max(0, _p10 * 0.7), _p90 * 1.25]),
+                          xaxis=dict(tickfont=dict(size=13,color="#111827")),
+                          showlegend=False)
+        st.plotly_chart(fig)
 
-    _shelf_orden_cad = (_total_skus_cad.sort_values("total", ascending=False)["Cadena"].tolist())
-    _shelf_orden_marc = list(dict.fromkeys(
-        m for m in (orden_cats + ["Otras"]) if m in _shelf["Marca_shelf"].unique()
-    ))
-    _shelf["Marca_shelf"] = pd.Categorical(_shelf["Marca_shelf"],
-                                            categories=_shelf_orden_marc, ordered=True)
-    _shelf["Cadena"] = pd.Categorical(_shelf["Cadena"],
-                                       categories=_shelf_orden_cad, ordered=True)
-    _shelf = _shelf.sort_values(["Cadena","Marca_shelf"])
+    with st.expander("Precio de góndola promedio — Cadena × Marca", expanded=True):
+        pivot = (dff2.groupby(["Marca","Cadena"])["Precio"]
+                     .mean().round(0).unstack("Cadena"))
+        pivot = pivot.reindex([c for c in orden_cats if c in pivot.index])
+        if not pivot.empty:
+            text_vals = [[f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
+                         for row in pivot.values]
+            fig = go.Figure(go.Heatmap(
+                z=pivot.values, x=pivot.columns.tolist(), y=pivot.index.tolist(),
+                colorscale="RdYlGn_r",
+                text=text_vals, texttemplate="%{text}",
+                textfont=dict(size=12, color="#111827"),
+                colorbar=dict(title="$", tickprefix="$", tickformat=","),
+            ))
+            fig.update_layout(**BASE, height=max(320, len(pivot)*48+80),
+                              xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
+                              yaxis=dict(tickfont=dict(size=13,color="#111827")))
+            st.plotly_chart(fig)
 
-    if not _shelf.empty:
-        _fig_shelf = px.bar(
-            _shelf, x="share_pct", y="Cadena", color="Marca_shelf",
-            orientation="h", barmode="stack",
-            color_discrete_map={**COLORES_CAT, "Otras":"#D1D5DB"},
-            labels={"share_pct":"Share de SKUs (%)","Cadena":"","Marca_shelf":"Marca"},
-            height=max(280, len(_shelf_orden_cad)*45+80),
-            category_orders={"Cadena": _shelf_orden_cad, "Marca_shelf": _shelf_orden_marc},
-        )
-        _fig_shelf.update_layout(
-            **BASE,
-            xaxis=dict(ticksuffix="%", range=[0,105], tickfont=dict(size=12,color="#111827")),
-            yaxis=dict(tickfont=dict(size=13,color="#111827")),
-        )
-        st.plotly_chart(_fig_shelf, use_container_width=True)
+    with st.expander("Precio de góndola mínimo por cadena y marca", expanded=True):
+        df_min = dff2.groupby(["Marca","Cadena"])["Precio"].min().reset_index()
+        df_min["Marca"] = pd.Categorical(df_min["Marca"], categories=orden_cats, ordered=True)
+        df_min = df_min.sort_values("Marca")
+        fig = px.bar(df_min, x="Marca", y="Precio", color="Cadena",
+                     barmode="group", color_discrete_map=COLORS_CADENAS,
+                     labels={"Precio":"Precio mínimo ($)","Marca":""},
+                     height=420, category_orders={"Marca": orden_cats})
+        fig.update_layout(**BASE,
+                          yaxis=dict(tickprefix="$", tickformat=",",
+                                     tickfont=dict(size=12,color="#111827")),
+                          xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
+        st.plotly_chart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 3 · POR MARCA
@@ -1182,74 +1469,71 @@ with tab3:
         dff3, _ = gram_filter("gram_tab3")
     with _fc3b:
         cadenas_pie3 = ["Todas las cadenas"] + sorted(dff3["Cadena"].unique().tolist())
-        cadena_pie3  = st.selectbox("🏪 Cadena (torta)", cadenas_pie3, key="cadena_pie3")
+        cadena_pie3  = st.selectbox("🏪 Cadena", cadenas_pie3, key="cadena_pie3")
 
-    col_l, col_r = st.columns([3, 2], gap="large")
+    src_pie3 = dff3 if cadena_pie3 == "Todas las cadenas" else dff3[dff3["Cadena"]==cadena_pie3]
 
-    with col_l:
-        st.markdown('<div class="chart-title">Precio de góndola promedio por marca</div>',
-                    unsafe_allow_html=True)
-        df_m = (dff3.groupby("Marca")
-                    .agg(p_prom=("Precio","mean"), n=("Precio","count"))
-                    .reset_index().sort_values("p_prom"))
-        fig = hbar(
-            df_x=df_m["p_prom"].tolist(),
-            df_y=df_m["Marca"].tolist(),
-            colores=[cm(m) for m in df_m["Marca"]],
-            textos=[f"${v:,.0f}  ({n})" for v,n in zip(df_m["p_prom"], df_m["n"])],
-            titulo_x="Precio promedio ($)",
-            altura=420,
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Precio por marca & Distribución", expanded=True):
+        col_l, col_r = st.columns([3, 2], gap="large")
 
-    with col_r:
-        st.markdown('<div class="chart-title">Cantidad de productos por marca</div>',
-                    unsafe_allow_html=True)
-        src_pie3 = dff3 if cadena_pie3 == "Todas las cadenas" else dff3[dff3["Cadena"]==cadena_pie3]
-        df_cnt = (src_pie3.groupby("Marca").size()
-                          .reset_index(name="n").sort_values("n", ascending=False))
-        fig = go.Figure(go.Pie(
-            labels=df_cnt["Marca"], values=df_cnt["n"],
-            marker_colors=[cm(m) for m in df_cnt["Marca"]],
-            hole=0.5, textinfo="label+percent",
-            textposition="outside",
-            textfont=dict(size=12, color="#111827"),
-        ))
-        fig.update_layout(**_BASE_CORE, height=420,
-                          margin=dict(l=10,r=10,t=40,b=40),
-                          showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        with col_l:
+            df_m = (src_pie3.groupby("Marca")
+                        .agg(p_prom=("Precio","mean"), n=("Precio","count"))
+                        .reset_index().sort_values("p_prom"))
+            fig = hbar(
+                df_x=df_m["p_prom"].tolist(),
+                df_y=df_m["Marca"].tolist(),
+                colores=[cm(m) for m in df_m["Marca"]],
+                textos=[f"${v:,.0f}  ({n})" for v,n in zip(df_m["p_prom"], df_m["n"])],
+                titulo_x="Precio promedio ($)",
+                altura=420,
+            )
+            st.plotly_chart(fig)
+
+        with col_r:
+            df_cnt = (src_pie3.groupby("Marca").size()
+                              .reset_index(name="n").sort_values("n", ascending=False))
+            fig = go.Figure(go.Pie(
+                labels=df_cnt["Marca"], values=df_cnt["n"],
+                marker_colors=[cm(m) for m in df_cnt["Marca"]],
+                hole=0.5, textinfo="label+percent",
+                textposition="outside",
+                textfont=dict(size=12, color="#111827"),
+            ))
+            fig.update_layout(**_BASE_CORE, height=420,
+                              margin=dict(l=10,r=10,t=40,b=40),
+                              showlegend=False)
+            st.plotly_chart(fig)
 
     # Heatmap presencia: marca × cadena (SKUs canónicos únicos)
     # Usamos df_full filtrado solo por cadena y marca (sin periodo ni gramaje)
     # para contar el catálogo real, independientemente de los filtros de semana y tamaño
-    st.markdown('<div class="chart-title">Presencia por marca y cadena — SKUs distintos</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="chart-note">Cantidad de SKUs distintos detectados por marca en cada cadena (sobre todo el historial)</div>',
-                unsafe_allow_html=True)
-    _pres_src = df_full[
-        df_full["Cadena"].isin(cadenas_sel) &
-        df_full["Marca"].isin(cats_sel)
-    ]
-    pres_pivot = (_pres_src.groupby(["Marca","Cadena"])["SKU_canonico"]
-                           .nunique().unstack("Cadena").fillna(0))
-    pres_pivot = pres_pivot.reindex([c for c in orden_cats if c in pres_pivot.index])
-    if not pres_pivot.empty:
-        text_pres = [[str(int(v)) if v > 0 else "—" for v in row] for row in pres_pivot.values]
-        fig = go.Figure(go.Heatmap(
-            z=pres_pivot.values,
-            x=pres_pivot.columns.tolist(),
-            y=pres_pivot.index.tolist(),
-            colorscale=[[0,"#F9FAFB"],[0.01,"#DBEAFE"],[0.5,"#3B82F6"],[1,"#1E3A8A"]],
-            text=text_pres, texttemplate="%{text}",
-            textfont=dict(size=13, color="#111827"),
-            showscale=True,
-            colorbar=dict(title="SKUs"),
-        ))
-        fig.update_layout(**BASE, height=max(280, len(pres_pivot)*44+80),
-                          xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
-                          yaxis=dict(tickfont=dict(size=13,color="#111827")))
-        st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Presencia por marca y cadena — SKUs distintos", expanded=True):
+        st.markdown('<div class="chart-note">Cantidad de SKUs distintos detectados por marca en cada cadena (sobre todo el historial)</div>',
+                    unsafe_allow_html=True)
+        _pres_src = df_full[
+            df_full["Cadena"].isin(cadenas_sel) &
+            df_full["Marca"].isin(cats_sel)
+        ]
+        pres_pivot = (_pres_src.groupby(["Marca","Cadena"])["SKU_canonico"]
+                               .nunique().unstack("Cadena").fillna(0))
+        pres_pivot = pres_pivot.reindex([c for c in orden_cats if c in pres_pivot.index])
+        if not pres_pivot.empty:
+            text_pres = [[str(int(v)) if v > 0 else "—" for v in row] for row in pres_pivot.values]
+            fig = go.Figure(go.Heatmap(
+                z=pres_pivot.values,
+                x=pres_pivot.columns.tolist(),
+                y=pres_pivot.index.tolist(),
+                colorscale=[[0,"#F9FAFB"],[0.01,"#DBEAFE"],[0.5,"#3B82F6"],[1,"#1E3A8A"]],
+                text=text_pres, texttemplate="%{text}",
+                textfont=dict(size=13, color="#111827"),
+                showscale=True,
+                colorbar=dict(title="SKUs"),
+            ))
+            fig.update_layout(**BASE, height=max(280, len(pres_pivot)*44+80),
+                              xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
+                              yaxis=dict(tickfont=dict(size=13,color="#111827")))
+            st.plotly_chart(fig)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1273,25 +1557,22 @@ with tab4:
     _col_precio4 = "Precio_real" if _usar_real4 else "Precio"
     _lbl_precio4 = "Precio real promedio ($, base semana actual)" if _usar_real4 else "Precio promedio góndola ($)"
 
-    st.markdown(
-        f'<div class="chart-title">Evolución precio de góndola promedio por marca'
-        f'{"  ·  <span style=\'color:#7C3AED\'>ajustado por inflación</span>" if _usar_real4 else ""}</div>',
-        unsafe_allow_html=True)
-    cats_evol = [c for c in orden_cats if c not in ("Otras","Marca Propia")]
-    df_ev_m = (dff4[dff4["Marca"].isin(cats_evol)]
-                   .groupby(["Periodo","Marca"])[_col_precio4].mean()
-                   .reset_index().rename(columns={_col_precio4:"_p"}))
-    df_ev_m["Periodo"] = pd.Categorical(df_ev_m["Periodo"], categories=orden_per, ordered=True)
-    fig = px.line(df_ev_m, x="Periodo", y="_p", color="Marca",
-                  markers=True, color_discrete_map=COLORES_CAT,
-                  labels={"_p": _lbl_precio4,"Periodo":""},
-                  height=460)
-    fig.update_traces(line=dict(width=2.5), marker=dict(size=8))
-    fig.update_layout(**BASE,
-                      yaxis=dict(tickprefix="$", tickformat=",",
-                                 tickfont=dict(size=12,color="#111827")),
-                      xaxis=dict(tickfont=dict(size=12,color="#111827")))
-    st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Evolución precio de góndola promedio por marca", expanded=True):
+        cats_evol = [c for c in orden_cats if c not in ("Otras","Marca Propia")]
+        df_ev_m = (dff4[dff4["Marca"].isin(cats_evol)]
+                       .groupby(["Periodo","Marca"])[_col_precio4].mean()
+                       .reset_index().rename(columns={_col_precio4:"_p"}))
+        df_ev_m["Periodo"] = pd.Categorical(df_ev_m["Periodo"], categories=orden_per, ordered=True)
+        fig = px.line(df_ev_m, x="Periodo", y="_p", color="Marca",
+                      markers=True, color_discrete_map=COLORES_CAT,
+                      labels={"_p": _lbl_precio4,"Periodo":""},
+                      height=460)
+        fig.update_traces(line=dict(width=2.5), marker=dict(size=8))
+        fig.update_layout(**BASE,
+                          yaxis=dict(tickprefix="$", tickformat=",",
+                                     tickfont=dict(size=12,color="#111827")),
+                          xaxis=dict(tickfont=dict(size=12,color="#111827")))
+        st.plotly_chart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 5 · OFERTAS
@@ -1320,266 +1601,268 @@ with tab5:
     _orden_per_of5 = [p for p in _todos_periodos_of
                       if p in (_periodos_of_sel if _periodos_of_sel else _todos_periodos_of)]
 
+    # df solo con la fecha más reciente — para los primeros 3 gráficos
+    _fecha_hoy = df_full["Fecha"].max()
+    _mask_of_hoy = _mask_of & (df_full["Fecha"] == _fecha_hoy)
+    df_of5_hoy = df_full[_mask_of_hoy].copy()
+
     if df_of5.empty:
         st.info("🏷️ No hay productos en oferta con los filtros actuales.")
     else:
-        # KPIs
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#7C2D12,#C2410C);border-radius:14px;
-                    padding:1.2rem 2rem;margin-bottom:1.2rem;display:flex;gap:3rem;align-items:center">
-          <div>
-            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
-                        letter-spacing:1px;color:rgba(255,255,255,0.6)">Productos en oferta</div>
-            <div style="font-size:2rem;font-weight:800;color:#fff">{len(df_of5):,}</div>
-          </div>
-          <div>
-            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
-                        letter-spacing:1px;color:rgba(255,255,255,0.6)">Descuento promedio</div>
-            <div style="font-size:2rem;font-weight:800;color:#fff">{df_of5["Descuento_pct"].mean():.0f}%</div>
-          </div>
-          <div>
-            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
-                        letter-spacing:1px;color:rgba(255,255,255,0.6)">Precio oferta prom.</div>
-            <div style="font-size:2rem;font-weight:800;color:#fff">${df_of5["Precio_oferta"].mean():,.0f}</div>
-          </div>
-          <div>
-            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
-                        letter-spacing:1px;color:rgba(255,255,255,0.6)">Precio góndola prom.</div>
-            <div style="font-size:2rem;font-weight:800;color:rgba(255,255,255,0.7)">${df_of5["Precio"].mean():,.0f}</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.expander("📊 Resumen de ofertas de hoy", expanded=True):
+            # KPIs — solo hoy
+            _src_kpi = df_of5_hoy if not df_of5_hoy.empty else df_of5
+            _lbl_hoy = str(_fecha_hoy)[:10] if not hasattr(_fecha_hoy, 'strftime') else _fecha_hoy.strftime("%d/%m/%Y")
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#7C2D12,#C2410C);border-radius:14px;
+                        padding:1.2rem 2rem;margin-bottom:1.2rem;display:flex;gap:3rem;align-items:center">
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                            letter-spacing:1px;color:rgba(255,255,255,0.6)">Ofertas hoy · {_lbl_hoy}</div>
+                <div style="font-size:2rem;font-weight:800;color:#fff">{len(_src_kpi):,}</div>
+              </div>
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                            letter-spacing:1px;color:rgba(255,255,255,0.6)">Descuento promedio</div>
+                <div style="font-size:2rem;font-weight:800;color:#fff">{_src_kpi["Descuento_pct"].mean():.0f}%</div>
+              </div>
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                            letter-spacing:1px;color:rgba(255,255,255,0.6)">Precio oferta prom.</div>
+                <div style="font-size:2rem;font-weight:800;color:#fff">${_src_kpi["Precio_oferta"].mean():,.0f}</div>
+              </div>
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                            letter-spacing:1px;color:rgba(255,255,255,0.6)">Precio góndola prom.</div>
+                <div style="font-size:2rem;font-weight:800;color:rgba(255,255,255,0.7)">${_src_kpi["Precio"].mean():,.0f}</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        col_l, col_r = st.columns([1,1], gap="large")
+            col_l, col_r = st.columns([1,1], gap="large")
 
-        with col_l:
-            st.markdown('<div class="chart-title">Descuento promedio por cadena</div>',
-                        unsafe_allow_html=True)
-            df_desc_c = (df_of5.groupby("Cadena")["Descuento_pct"].mean()
-                              .reset_index().sort_values("Descuento_pct"))
-            fig = go.Figure(go.Bar(
-                x=df_desc_c["Descuento_pct"], y=df_desc_c["Cadena"],
-                orientation="h",
-                marker_color=[cc(c) for c in df_desc_c["Cadena"]],
-                text=[f"{v:.0f}%" for v in df_desc_c["Descuento_pct"]],
-                textposition="outside",
-                textfont=dict(size=13, color="#111827"),
-                cliponaxis=False,
-            ))
-            vmax_d = df_desc_c["Descuento_pct"].max()
-            fig.update_layout(**_BASE_CORE, height=320,
-                              margin=dict(l=10, r=120, t=40, b=10),
-                              xaxis=dict(title="Descuento %", ticksuffix="%",
-                                         tickfont=dict(size=12,color="#111827"),
-                                         range=[0, vmax_d * 1.4]),
-                              yaxis=dict(tickfont=dict(size=13,color="#111827")),
-                              showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            with col_l:
+                df_desc_c = (_src_kpi.groupby("Cadena")["Descuento_pct"].mean()
+                                  .reset_index().sort_values("Descuento_pct"))
+                fig = go.Figure(go.Bar(
+                    x=df_desc_c["Descuento_pct"], y=df_desc_c["Cadena"],
+                    orientation="h",
+                    marker_color=[cc(c) for c in df_desc_c["Cadena"]],
+                    text=[f"{v:.0f}%" for v in df_desc_c["Descuento_pct"]],
+                    textposition="outside",
+                    textfont=dict(size=13, color="#111827"),
+                    cliponaxis=False,
+                ))
+                vmax_d = df_desc_c["Descuento_pct"].max()
+                fig.update_layout(**_BASE_CORE, height=320,
+                                  margin=dict(l=10, r=120, t=40, b=10),
+                                  xaxis=dict(title="Descuento %", ticksuffix="%",
+                                             tickfont=dict(size=12,color="#111827"),
+                                             range=[0, vmax_d * 1.4]),
+                                  yaxis=dict(tickfont=dict(size=13,color="#111827")),
+                                  showlegend=False)
+                st.plotly_chart(fig)
 
-        with col_r:
-            st.markdown('<div class="chart-title">Cantidad de ofertas por cadena</div>',
-                        unsafe_allow_html=True)
-            df_of_cnt = df_of5.groupby("Cadena").size().reset_index(name="n")
-            fig = go.Figure(go.Pie(
-                labels=df_of_cnt["Cadena"], values=df_of_cnt["n"],
-                marker_colors=[cc(c) for c in df_of_cnt["Cadena"]],
-                hole=0.55, textinfo="label+percent",
-                textposition="outside",
-                textfont=dict(size=12, color="#111827"),
-            ))
-            fig.update_layout(**_BASE_CORE, height=320,
-                              margin=dict(l=10,r=10,t=40,b=40),
-                              showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            with col_r:
+                df_of_cnt = _src_kpi.groupby("Cadena").size().reset_index(name="n")
+                fig = go.Figure(go.Pie(
+                    labels=df_of_cnt["Cadena"], values=df_of_cnt["n"],
+                    marker_colors=[cc(c) for c in df_of_cnt["Cadena"]],
+                    hole=0.55, textinfo="label+percent",
+                    textposition="outside",
+                    textfont=dict(size=12, color="#111827"),
+                ))
+                fig.update_layout(**_BASE_CORE, height=320,
+                                  margin=dict(l=10,r=10,t=40,b=40),
+                                  showlegend=False)
+                st.plotly_chart(fig)
 
         # Góndola vs oferta por marca
-        st.markdown('<div class="chart-title">Precio góndola vs precio oferta por marca</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="chart-note">La diferencia entre las barras = ahorro de la oferta</div>',
-                    unsafe_allow_html=True)
-        df_gvof = (df_of5.groupby("Marca")
-                        .agg(gondola=("Precio","mean"), oferta=("Precio_oferta","mean"))
-                        .reset_index())
-        df_gvof["Marca"] = pd.Categorical(df_gvof["Marca"], categories=orden_cats, ordered=True)
-        df_gvof = df_gvof.sort_values("Marca")
-        fig = go.Figure()
-        fig.add_trace(go.Bar(name="Precio góndola", x=df_gvof["Marca"],
-                              y=df_gvof["gondola"], marker_color="#D1D5DB",
-                              text=[f"${v:,.0f}" for v in df_gvof["gondola"]],
-                              textposition="outside",
-                              textfont=dict(size=12,color="#374151")))
-        fig.add_trace(go.Bar(name="Precio oferta", x=df_gvof["Marca"],
-                              y=df_gvof["oferta"],
-                              marker_color=[cm(m) for m in df_gvof["Marca"]],
-                              text=[f"${v:,.0f}" for v in df_gvof["oferta"]],
-                              textposition="outside",
-                              textfont=dict(size=12,color="#111827")))
-        ymax = df_gvof["gondola"].max() if not df_gvof.empty else 1
-        fig.update_layout(**BASE, barmode="overlay", height=420,
-                          yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
-                                     tickfont=dict(size=12,color="#111827"),
-                                     range=[0, ymax * 1.25]),
-                          xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
-        st.plotly_chart(fig, use_container_width=True)
+        with st.expander("Precio góndola vs precio oferta por marca", expanded=True):
+            st.markdown('<div class="chart-note">La diferencia entre las barras = ahorro de la oferta</div>',
+                        unsafe_allow_html=True)
+            _gvof_gram_opts = [e for e in GRAMAJE_BUCKETS if df_of5["Gramaje"].eq(e).any()]
+            _gvof_gram_sel = st.selectbox("Gramaje", ["Todos"] + _gvof_gram_opts, key="gram_gvof")
+            _df_gvof_src = df_of5 if _gvof_gram_sel == "Todos" else df_of5[df_of5["Gramaje"] == _gvof_gram_sel]
+            df_gvof = (_df_gvof_src.groupby("Marca")
+                            .agg(gondola=("Precio","mean"), oferta=("Precio_oferta","mean"))
+                            .reset_index())
+            df_gvof["Marca"] = pd.Categorical(df_gvof["Marca"], categories=orden_cats, ordered=True)
+            df_gvof = df_gvof.sort_values("Marca")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(name="Precio góndola", x=df_gvof["Marca"],
+                                  y=df_gvof["gondola"], marker_color="#D1D5DB",
+                                  text=[f"${v:,.0f}" for v in df_gvof["gondola"]],
+                                  textposition="outside",
+                                  textfont=dict(size=12,color="#374151")))
+            fig.add_trace(go.Bar(name="Precio oferta", x=df_gvof["Marca"],
+                                  y=df_gvof["oferta"],
+                                  marker_color=[cm(m) for m in df_gvof["Marca"]],
+                                  text=[f"${v:,.0f}" for v in df_gvof["oferta"]],
+                                  textposition="outside",
+                                  textfont=dict(size=12,color="#111827")))
+            ymax = df_gvof["gondola"].max() if not df_gvof.empty else 1
+            fig.update_layout(**BASE, barmode="overlay", height=420,
+                              yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
+                                         tickfont=dict(size=12,color="#111827"),
+                                         range=[0, ymax * 1.25]),
+                              xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
+            st.plotly_chart(fig)
 
         # Ofertas en el tiempo por marca y por cadena
         _n_per_of5 = df_of5["Periodo"].nunique()
         if _n_per_of5 >= 2:
-            col_ol, col_or = st.columns(2, gap="large")
+            with st.expander("Ofertas en el tiempo por marca & cadena", expanded=True):
+                col_ol, col_or = st.columns(2, gap="large")
 
-            with col_ol:
-                st.markdown('<div class="chart-title">Cantidad de ofertas por período · Marca</div>',
-                            unsafe_allow_html=True)
-                df_of_t_m = (df_of5.groupby(["Periodo","Marca"]).size().reset_index(name="n"))
-                df_of_t_m["Periodo"] = pd.Categorical(df_of_t_m["Periodo"],
-                                                        categories=_orden_per_of5, ordered=True)
-                fig = px.bar(df_of_t_m, x="Periodo", y="n", color="Marca",
-                             barmode="stack", color_discrete_map=COLORES_CAT,
-                             labels={"n":"Cantidad de ofertas","Periodo":""},
-                             height=380, category_orders={"Marca": orden_cats})
-                fig.update_layout(**BASE,
-                                  xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
-                                  yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                st.plotly_chart(fig, use_container_width=True)
+                with col_ol:
+                    df_of_t_m = (df_of5.groupby(["Periodo","Marca"]).size().reset_index(name="n"))
+                    df_of_t_m["Periodo"] = pd.Categorical(df_of_t_m["Periodo"],
+                                                            categories=_orden_per_of5, ordered=True)
+                    fig = px.bar(df_of_t_m, x="Periodo", y="n", color="Marca",
+                                 barmode="stack", color_discrete_map=COLORES_CAT,
+                                 labels={"n":"Cantidad de ofertas","Periodo":""},
+                                 height=380, category_orders={"Marca": orden_cats})
+                    fig.update_layout(**BASE,
+                                      xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
+                                      yaxis=dict(tickfont=dict(size=12,color="#111827")))
+                    st.plotly_chart(fig)
 
-            with col_or:
-                st.markdown('<div class="chart-title">Cantidad de ofertas por período · Cadena</div>',
-                            unsafe_allow_html=True)
-                df_of_t_c = (df_of5.groupby(["Periodo","Cadena"]).size().reset_index(name="n"))
-                df_of_t_c["Periodo"] = pd.Categorical(df_of_t_c["Periodo"],
-                                                        categories=_orden_per_of5, ordered=True)
-                fig = px.bar(df_of_t_c, x="Periodo", y="n", color="Cadena",
-                             barmode="stack", color_discrete_map=COLORS_CADENAS,
-                             labels={"n":"Cantidad de ofertas","Periodo":""},
-                             height=380)
-                fig.update_layout(**BASE,
-                                  xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
-                                  yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                st.plotly_chart(fig, use_container_width=True)
+                with col_or:
+                    df_of_t_c = (df_of5.groupby(["Periodo","Cadena"]).size().reset_index(name="n"))
+                    df_of_t_c["Periodo"] = pd.Categorical(df_of_t_c["Periodo"],
+                                                            categories=_orden_per_of5, ordered=True)
+                    fig = px.bar(df_of_t_c, x="Periodo", y="n", color="Cadena",
+                                 barmode="stack", color_discrete_map=COLORS_CADENAS,
+                                 labels={"n":"Cantidad de ofertas","Periodo":""},
+                                 height=380)
+                    fig.update_layout(**BASE,
+                                      xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
+                                      yaxis=dict(tickfont=dict(size=12,color="#111827")))
+                    st.plotly_chart(fig)
 
         # Top 20 mejores descuentos
-        st.markdown('<div class="chart-title">Top 20 · Mejores descuentos del período</div>',
-                    unsafe_allow_html=True)
-        df_top = (df_of5.sort_values("Descuento_pct", ascending=False)
-                        .head(20)[["Cadena","Marca","Producto","Gramaje",
-                                   "Precio","Precio_oferta","Descuento_pct"]]
-                        .copy())
-        df_top.columns = ["Cadena","Marca","Producto","Gramaje",
-                          "Precio góndola ($)","Precio oferta ($)","Descuento %"]
-        st.dataframe(df_top, use_container_width=True, height=400,
-            column_config={
-                "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
-                "Precio oferta ($)": st.column_config.NumberColumn(format="$%d"),
-                "Descuento %":       st.column_config.NumberColumn(format="%.0f%%"),
-            },
-            hide_index=True,
-        )
+        with st.expander("Top 20 · Mejores descuentos del período", expanded=True):
+            df_top = (df_of5.sort_values("Descuento_pct", ascending=False)
+                            .head(20)[["Cadena","Marca","Producto","Gramaje",
+                                       "Precio","Precio_oferta","Descuento_pct"]]
+                            .copy())
+            df_top.columns = ["Cadena","Marca","Producto","Gramaje",
+                              "Precio góndola ($)","Precio oferta ($)","Descuento %"]
+            st.dataframe(df_top, height=400,
+                column_config={
+                    "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
+                    "Precio oferta ($)": st.column_config.NumberColumn(format="$%d"),
+                    "Descuento %":       st.column_config.NumberColumn(format="%.0f%%"),
+                },
+                hide_index=True,
+            )
 
         # ── Presencia de ofertas Oliovita & Zuelo × período ──────────────────
-        _MARCAS_OF2 = {"Oliovita", "Zuelo"}
-        _dest_periodos = _periodos_of_sel if _periodos_of_sel else _todos_periodos_of
+        with st.expander("Presencia de ofertas · Oliovita & Zuelo", expanded=True):
+            st.markdown('<div class="chart-note">✓ = hubo oferta ese período · — = sin oferta</div>',
+                        unsafe_allow_html=True)
+            _MARCAS_OF2 = {"Oliovita", "Zuelo", "La Toscana"}
+            _dest_periodos = _periodos_of_sel if _periodos_of_sel else _todos_periodos_of
 
-        # Filtros locales: cadena y granularidad
-        _of2_fa, _of2_fb, _of2_fc = st.columns([2, 1.2, 3])
-        _cadenas_of2_disp = sorted(
-            df_full[df_full["Marca_raw"].isin(_MARCAS_OF2)]["Cadena"].unique()
-        )
-        with _of2_fa:
-            _cadenas_of2_sel = st.multiselect(
-                "Cadena", _cadenas_of2_disp, default=_cadenas_of2_disp,
-                key="of2_cadenas", label_visibility="collapsed",
-                placeholder="Todas las cadenas",
+            # Filtros locales: cadena y granularidad
+            _of2_fa, _of2_fb, _of2_fc = st.columns([2, 1.2, 3])
+            _cadenas_of2_disp = sorted(
+                df_full[df_full["Marca_raw"].isin(_MARCAS_OF2)]["Cadena"].unique()
             )
-        with _of2_fb:
-            _of2_gran = st.selectbox(
-                "Granularidad", ["Semanal", "Mensual"],
-                key="of2_gran", label_visibility="collapsed",
-            )
-        _cadenas_of2_act = _cadenas_of2_sel if _cadenas_of2_sel else _cadenas_of2_disp
+            with _of2_fa:
+                _cadenas_of2_sel = st.multiselect(
+                    "Cadena", _cadenas_of2_disp, default=_cadenas_of2_disp,
+                    key="of2_cadenas", label_visibility="collapsed",
+                    placeholder="Todas las cadenas",
+                )
+            with _of2_fb:
+                _of2_gran = st.selectbox(
+                    "Granularidad", ["Semanal", "Mensual"],
+                    key="of2_gran", label_visibility="collapsed",
+                )
+            _cadenas_of2_act = _cadenas_of2_sel if _cadenas_of2_sel else _cadenas_of2_disp
 
-        st.markdown('<div class="chart-title">Presencia de ofertas · Oliovita & Zuelo</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="chart-note">✓ = hubo oferta ese período · — = sin oferta</div>',
-                    unsafe_allow_html=True)
-
-        _df_dest = df_full[
-            df_full["Marca_raw"].isin(_MARCAS_OF2) &
-            df_full["Periodo"].isin(_dest_periodos) &
-            df_full["Cadena"].isin(_cadenas_of2_act) &
-            (df_full["Gramaje"].isna() | df_full["Gramaje"].isin(gram_sel))
-        ].copy()
-
-        if not _df_dest.empty:
-            # Aplicar granularidad
-            if _of2_gran == "Mensual":
-                _df_dest["_col_per"] = pd.to_datetime(_df_dest["Fecha"]).dt.strftime("%b %Y")
-            else:
-                _df_dest["_col_per"] = _df_dest["Periodo"]
-
-            _skus_dest = sorted(_df_dest["SKU_canonico"].unique())
-            # Orden de columnas
-            if _of2_gran == "Mensual":
-                _pers_dest_ord = list(dict.fromkeys(
-                    pd.to_datetime(_df_dest["Fecha"]).dt.to_period("M")
-                    .sort_values().astype(str)
-                    .map(lambda p: pd.Period(p).strftime("%b %Y"))
-                ))
-            else:
-                _pers_dest_ord = [p for p in _orden_per_of5 if p in set(_dest_periodos)]
-
-            # Set de ofertas con la columna de período elegida
-            _of_mask = (
-                df_full["En_oferta"] &
+            _df_dest = df_full[
                 df_full["Marca_raw"].isin(_MARCAS_OF2) &
                 df_full["Periodo"].isin(_dest_periodos) &
                 df_full["Cadena"].isin(_cadenas_of2_act) &
                 (df_full["Gramaje"].isna() | df_full["Gramaje"].isin(gram_sel))
-            )
-            _df_of_mask = df_full[_of_mask].copy()
-            if _of2_gran == "Mensual":
-                _df_of_mask["_col_per"] = pd.to_datetime(_df_of_mask["Fecha"]).dt.strftime("%b %Y")
+            ].copy()
+
+            if not _df_dest.empty:
+                # Aplicar granularidad
+                if _of2_gran == "Mensual":
+                    _df_dest["_col_per"] = pd.to_datetime(_df_dest["Fecha"]).dt.strftime("%b %Y")
+                else:
+                    _df_dest["_col_per"] = _df_dest["Periodo"]
+
+                _skus_dest = sorted(_df_dest["SKU_canonico"].unique())
+                # Orden de columnas
+                if _of2_gran == "Mensual":
+                    _pers_dest_ord = list(dict.fromkeys(
+                        pd.to_datetime(_df_dest["Fecha"]).dt.to_period("M")
+                        .sort_values().astype(str)
+                        .map(lambda p: pd.Period(p).strftime("%b %Y"))
+                    ))
+                else:
+                    _pers_dest_ord = [p for p in _orden_per_of5 if p in set(_dest_periodos)]
+
+                # Set de ofertas con la columna de período elegida
+                _of_mask = (
+                    df_full["En_oferta"] &
+                    df_full["Marca_raw"].isin(_MARCAS_OF2) &
+                    df_full["Periodo"].isin(_dest_periodos) &
+                    df_full["Cadena"].isin(_cadenas_of2_act) &
+                    (df_full["Gramaje"].isna() | df_full["Gramaje"].isin(gram_sel))
+                )
+                _df_of_mask = df_full[_of_mask].copy()
+                if _of2_gran == "Mensual":
+                    _df_of_mask["_col_per"] = pd.to_datetime(_df_of_mask["Fecha"]).dt.strftime("%b %Y")
+                else:
+                    _df_of_mask["_col_per"] = _df_of_mask["Periodo"]
+                _of_set = set(zip(_df_of_mask["SKU_canonico"], _df_of_mask["_col_per"]))
+
+                # Construir tabla de texto ✓ / —
+                _hmap_rows = []
+                for _sk in _skus_dest:
+                    _row = {"SKU": _sk}
+                    for _pe in _pers_dest_ord:
+                        _row[_pe] = "✓" if (_sk, _pe) in _of_set else "—"
+                    _hmap_rows.append(_row)
+                _hmap_df = pd.DataFrame(_hmap_rows).set_index("SKU")
+                _hmap_num = _hmap_df.map(lambda x: 1.0 if x == "✓" else 0.0)
+
+                # Celdas compactas: alto fijo pequeño por fila
+                _cell_h   = 24          # px por fila
+                _header_h = 50          # px para el eje X
+                _oh_h = max(120, len(_skus_dest) * _cell_h + _header_h + 20)
+
+                fig_oh = go.Figure(go.Heatmap(
+                    z=_hmap_num.values,
+                    x=_pers_dest_ord,
+                    y=_hmap_num.index.tolist(),
+                    text=_hmap_df.values,
+                    texttemplate="%{text}",
+                    colorscale=[[0, "#F1F5F9"], [1, "#15803D"]],
+                    zmin=0, zmax=1,
+                    showscale=False,
+                    xgap=2, ygap=2,
+                    textfont=dict(size=11, color="#111827"),
+                ))
+                fig_oh.update_layout(
+                    **_BASE_CORE,
+                    height=_oh_h,
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    xaxis=dict(tickfont=dict(size=10, color="#374151"), tickangle=-30,
+                               side="top"),
+                    yaxis=dict(tickfont=dict(size=10, color="#374151"), autorange="reversed"),
+                )
+                _oh_col, _ = st.columns([1, 2])
+                with _oh_col:
+                    st.plotly_chart(fig_oh)
             else:
-                _df_of_mask["_col_per"] = _df_of_mask["Periodo"]
-            _of_set = set(zip(_df_of_mask["SKU_canonico"], _df_of_mask["_col_per"]))
-
-            # Construir tabla de texto ✓ / —
-            _hmap_rows = []
-            for _sk in _skus_dest:
-                _row = {"SKU": _sk}
-                for _pe in _pers_dest_ord:
-                    _row[_pe] = "✓" if (_sk, _pe) in _of_set else "—"
-                _hmap_rows.append(_row)
-            _hmap_df = pd.DataFrame(_hmap_rows).set_index("SKU")
-            _hmap_num = _hmap_df.replace({"✓": 1, "—": 0}).astype(float)
-
-            # Celdas compactas: alto fijo pequeño por fila
-            _cell_h   = 24          # px por fila
-            _header_h = 50          # px para el eje X
-            _oh_h = max(120, len(_skus_dest) * _cell_h + _header_h + 20)
-
-            fig_oh = go.Figure(go.Heatmap(
-                z=_hmap_num.values,
-                x=_pers_dest_ord,
-                y=_hmap_num.index.tolist(),
-                text=_hmap_df.values,
-                texttemplate="%{text}",
-                colorscale=[[0, "#F1F5F9"], [1, "#15803D"]],
-                zmin=0, zmax=1,
-                showscale=False,
-                xgap=2, ygap=2,
-                textfont=dict(size=11, color="#111827"),
-            ))
-            fig_oh.update_layout(
-                **_BASE_CORE,
-                height=_oh_h,
-                margin=dict(l=10, r=10, t=10, b=10),
-                xaxis=dict(tickfont=dict(size=10, color="#374151"), tickangle=-30,
-                           side="top"),
-                yaxis=dict(tickfont=dict(size=10, color="#374151"), autorange="reversed"),
-            )
-            st.plotly_chart(fig_oh, use_container_width=True)
-        else:
-            st.info("No hay SKUs de Oliovita o Zuelo con los filtros seleccionados.")
+                st.info("No hay SKUs de Oliovita o Zuelo con los filtros seleccionados.")
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 10 · BASE (tabla completa)
@@ -1612,7 +1895,7 @@ with tab10:
                         "Gramaje","Precio góndola ($)","Precio/Litro ($)","En oferta"]
 
     st.markdown(f"**{len(df_show):,} productos** · precios de góndola")
-    st.dataframe(df_show, use_container_width=True, height=530,
+    st.dataframe(df_show, height=530,
         column_config={
             "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
             "Precio/Litro ($)":  st.column_config.NumberColumn(format="$%d"),
@@ -1628,173 +1911,173 @@ with tab10:
 # TAB 3 (continuación) · DETALLE POR MARCA
 # ══════════════════════════════════════════════════════════════════════════
 with tab3:
-    st.markdown("<hr style='border:none;border-top:2px solid #E5E7EB;margin:1.5rem 0 1rem'>",
-                unsafe_allow_html=True)
-    st.markdown('<div class="chart-title">🔍 Detalle de marca</div>', unsafe_allow_html=True)
-    marcas_raw_disp = sorted(dff["Marca_raw"].unique())
-    _fc7a, _fc7b, _ = st.columns([2, 3, 2])
-    with _fc7a:
-        marca_sel7 = st.selectbox("🏷️ Elegí una marca", marcas_raw_disp, key="marca_info")
-    with _fc7b:
-        skus_marca7 = ["Todos los SKUs"] + sorted(
-            dff[dff["Marca_raw"] == marca_sel7]["SKU_canonico"].unique().tolist()
-        )
-        sku_sel7 = st.selectbox("📦 SKU", skus_marca7, key="sku_info")
-
-    df7 = dff[dff["Marca_raw"] == marca_sel7].copy()
-    # Si se seleccionó un SKU específico, filtrar para los KPIs y gráficos de detalle
-    df7_sku_filter = df7 if sku_sel7 == "Todos los SKUs" else df7[df7["SKU_canonico"] == sku_sel7]
-
-    if df7.empty:
-        st.info("Sin datos para esta marca con los filtros actuales.")
-    else:
-        # KPIs de la marca (o del SKU seleccionado)
-        _src_kpi = df7_sku_filter
-        _p_min = _src_kpi["Precio"].min()
-        _p_max = _src_kpi["Precio"].max()
-        _p_avg = _src_kpi["Precio"].mean()
-        _cadenas7 = _src_kpi["Cadena"].nunique()
-        _skus7    = _src_kpi["SKU_canonico"].nunique()
-        _en_of7   = _src_kpi["En_oferta"].sum()
-
-        k1,k2,k3,k4,k5,k6 = st.columns(6)
-        for col,(cls,lab,val,sub) in zip([k1,k2,k3,k4,k5,k6],[
-            ("green",  "Precio mínimo",   f"${_p_min:,.0f}", "góndola"),
-            ("orange", "Precio promedio", f"${_p_avg:,.0f}", "góndola"),
-            ("red",    "Precio máximo",   f"${_p_max:,.0f}", "góndola"),
-            ("purple", "Cadenas",          str(_cadenas7),   "donde está presente"),
-            ("",       "SKUs distintos",   str(_skus7),      "canónicos"),
-            ("teal",   "En oferta",        str(int(_en_of7)), "registros con descuento"),
-        ]):
-            with col:
-                st.markdown(f"""<div class="kpi-card {cls}">
-                    <div class="kpi-label">{lab}</div>
-                    <div class="kpi-value" style="font-size:{'1.2rem' if len(val)>9 else '1.7rem'}">{val}</div>
-                    <div class="kpi-sub">{sub}</div>
-                </div>""", unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_a, col_b_7 = st.columns([3, 2], gap="large")
-
-        with col_a:
-            # Precio promedio por SKU canónico
-            st.markdown('<div class="chart-title">Precio de góndola por SKU</div>',
-                        unsafe_allow_html=True)
-            df7_sku = (df7.groupby("SKU_canonico")
-                          .agg(p_avg=("Precio","mean"),
-                               cadenas=("Cadena","nunique"),
-                               en_of=("En_oferta","sum"))
-                          .reset_index().sort_values("p_avg"))
-            fig = go.Figure(go.Bar(
-                x=df7_sku["p_avg"], y=df7_sku["SKU_canonico"], orientation="h",
-                marker_color="#2E86AB",
-                text=[f"${v:,.0f}  · {int(c)} cadena{'s' if c!=1 else ''}"
-                      for v,c in zip(df7_sku["p_avg"], df7_sku["cadenas"])],
-                textposition="outside",
-                textfont=dict(size=12, color="#111827"),
-                cliponaxis=False,
-            ))
-            vmax7 = df7_sku["p_avg"].max() if not df7_sku.empty else 1
-            fig.update_layout(**_BASE_CORE,
-                              height=max(300, len(df7_sku)*38+60),
-                              margin=dict(l=10, r=260, t=40, b=10),
-                              xaxis=dict(title="Precio promedio ($)", tickprefix="$",
-                                         tickformat=",", range=[0, vmax7*1.4]),
-                              yaxis=dict(tickfont=dict(size=11, color="#111827")),
-                              showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col_b_7:
-            # Precio por cadena (box) — usa el filtro de SKU si está activo
-            st.markdown('<div class="chart-title">Precio por cadena</div>',
-                        unsafe_allow_html=True)
-            fig = go.Figure()
-            for cad in sorted(df7_sku_filter["Cadena"].unique()):
-                sub = df7_sku_filter[df7_sku_filter["Cadena"]==cad]["Precio"]
-                fig.add_trace(go.Box(y=sub, name=cad, marker_color=cc(cad),
-                                      boxmean=True, line_width=2))
-            fig.update_layout(**BASE, height=400,
-                              yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
-                                         tickfont=dict(size=12,color="#111827")),
-                              xaxis=dict(tickfont=dict(size=12,color="#111827")),
-                              showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # ── Mapa semanal de precios por SKU seleccionado ─────────────────────
-        if sku_sel7 != "Todos los SKUs":
-            st.markdown(f'<div class="chart-title">Mapa semanal de precios — {sku_sel7}</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-note">Precio de góndola promedio por semana y cadena. Celda vacía = sin datos ese período</div>',
-                        unsafe_allow_html=True)
-            orden_per7h = sorted(df7_sku_filter["Periodo"].unique(),
-                                 key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
-            hmap_df = (df7_sku_filter
-                       .groupby(["Periodo","Cadena"])["Precio"].mean()
-                       .reset_index())
-            hmap_piv = hmap_df.pivot(index="Cadena", columns="Periodo", values="Precio")
-            # Ordenar columnas cronológicamente
-            hmap_piv = hmap_piv.reindex(columns=[c for c in orden_per7h if c in hmap_piv.columns])
-            if not hmap_piv.empty:
-                # Texto de cada celda
-                text_hmap = [
-                    [f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
-                    for row in hmap_piv.values
-                ]
-                fig = go.Figure(go.Heatmap(
-                    z=hmap_piv.values,
-                    x=hmap_piv.columns.tolist(),
-                    y=hmap_piv.index.tolist(),
-                    colorscale=[[0,"#EFF6FF"],[0.5,"#3B82F6"],[1,"#1E3A8A"]],
-                    text=text_hmap, texttemplate="%{text}",
-                    textfont=dict(size=12, color="#111827"),
-                    showscale=True,
-                    colorbar=dict(title="Precio ($)", tickprefix="$", tickformat=","),
-                    zsmooth=False,
-                ))
-                fig.update_layout(**BASE,
-                                  height=max(200, len(hmap_piv)*50+80),
-                                  xaxis=dict(tickfont=dict(size=12,color="#111827"),
-                                             side="bottom", tickangle=-20),
-                                  yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                st.plotly_chart(fig, use_container_width=True)
-
-        # Tabla detallada
-        st.markdown('<div class="chart-title">Detalle completo de registros</div>',
+    with st.expander("🔍 Detalle de marca", expanded=True):
+        st.markdown("<hr style='border:none;border-top:2px solid #E5E7EB;margin:1.5rem 0 1rem'>",
                     unsafe_allow_html=True)
-        df7_show = (df7_sku_filter[["Periodo","Cadena","SKU_canonico","Gramaje",
-                                    "Precio","Precio_oferta","Descuento_pct","En_oferta"]]
-                    .sort_values(["Periodo","Cadena","Precio"]).copy())
-        df7_show.columns = ["Semana","Cadena","SKU","Gramaje",
-                             "Precio góndola ($)","Precio oferta ($)","Descuento %","En oferta"]
-        st.dataframe(df7_show, use_container_width=True, height=400,
-            column_config={
-                "Precio góndola ($)": st.column_config.NumberColumn(format="$%d"),
-                "Precio oferta ($)":  st.column_config.NumberColumn(format="$%d"),
-                "Descuento %":        st.column_config.NumberColumn(format="%.0f%%"),
-                "En oferta":          st.column_config.CheckboxColumn(),
-            },
-            hide_index=True,
-        )
+        marcas_raw_disp = sorted(dff["Marca_raw"].unique())
+        _fc7a, _fc7b, _ = st.columns([2, 3, 2])
+        with _fc7a:
+            marca_sel7 = st.selectbox("🏷️ Elegí una marca", marcas_raw_disp, key="marca_info")
+        with _fc7b:
+            skus_marca7 = ["Todos los SKUs"] + sorted(
+                dff[dff["Marca_raw"] == marca_sel7]["SKU_canonico"].unique().tolist()
+            )
+            sku_sel7 = st.selectbox("📦 SKU", skus_marca7, key="sku_info")
 
-        # Evolución por SKU canónico si hay varios períodos
-        if df7["Periodo"].nunique() > 1:
-            st.markdown('<div class="chart-title">Evolución de precio por SKU</div>',
+        df7 = dff[dff["Marca_raw"] == marca_sel7].copy()
+        # Si se seleccionó un SKU específico, filtrar para los KPIs y gráficos de detalle
+        df7_sku_filter = df7 if sku_sel7 == "Todos los SKUs" else df7[df7["SKU_canonico"] == sku_sel7]
+
+        if df7.empty:
+            st.info("Sin datos para esta marca con los filtros actuales.")
+        else:
+            # KPIs de la marca (o del SKU seleccionado)
+            _src_kpi = df7_sku_filter
+            _p_min = _src_kpi["Precio"].min()
+            _p_max = _src_kpi["Precio"].max()
+            _p_avg = _src_kpi["Precio"].mean()
+            _cadenas7 = _src_kpi["Cadena"].nunique()
+            _skus7    = _src_kpi["SKU_canonico"].nunique()
+            _en_of7   = _src_kpi["En_oferta"].sum()
+
+            k1,k2,k3,k4,k5,k6 = st.columns(6)
+            for col,(cls,lab,val,sub) in zip([k1,k2,k3,k4,k5,k6],[
+                ("green",  "Precio mínimo",   f"${_p_min:,.0f}", "góndola"),
+                ("orange", "Precio promedio", f"${_p_avg:,.0f}", "góndola"),
+                ("red",    "Precio máximo",   f"${_p_max:,.0f}", "góndola"),
+                ("purple", "Cadenas",          str(_cadenas7),   "donde está presente"),
+                ("",       "SKUs distintos",   str(_skus7),      "canónicos"),
+                ("teal",   "En oferta",        str(int(_en_of7)), "registros con descuento"),
+            ]):
+                with col:
+                    st.markdown(f"""<div class="kpi-card {cls}">
+                        <div class="kpi-label">{lab}</div>
+                        <div class="kpi-value" style="font-size:{'1.2rem' if len(val)>9 else '1.7rem'}">{val}</div>
+                        <div class="kpi-sub">{sub}</div>
+                    </div>""", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_a, col_b_7 = st.columns([3, 2], gap="large")
+
+            with col_a:
+                # Precio promedio por SKU canónico
+                st.markdown('<div class="chart-title">Precio de góndola por SKU</div>',
+                            unsafe_allow_html=True)
+                df7_sku = (df7.groupby("SKU_canonico")
+                              .agg(p_avg=("Precio","mean"),
+                                   cadenas=("Cadena","nunique"),
+                                   en_of=("En_oferta","sum"))
+                              .reset_index().sort_values("p_avg"))
+                fig = go.Figure(go.Bar(
+                    x=df7_sku["p_avg"], y=df7_sku["SKU_canonico"], orientation="h",
+                    marker_color="#2E86AB",
+                    text=[f"${v:,.0f}  · {int(c)} cadena{'s' if c!=1 else ''}"
+                          for v,c in zip(df7_sku["p_avg"], df7_sku["cadenas"])],
+                    textposition="outside",
+                    textfont=dict(size=12, color="#111827"),
+                    cliponaxis=False,
+                ))
+                vmax7 = df7_sku["p_avg"].max() if not df7_sku.empty else 1
+                fig.update_layout(**_BASE_CORE,
+                                  height=max(300, len(df7_sku)*38+60),
+                                  margin=dict(l=10, r=260, t=40, b=10),
+                                  xaxis=dict(title="Precio promedio ($)", tickprefix="$",
+                                             tickformat=",", range=[0, vmax7*1.4]),
+                                  yaxis=dict(tickfont=dict(size=11, color="#111827")),
+                                  showlegend=False)
+                st.plotly_chart(fig)
+
+            with col_b_7:
+                # Precio por cadena (box) — usa el filtro de SKU si está activo
+                st.markdown('<div class="chart-title">Precio por cadena</div>',
+                            unsafe_allow_html=True)
+                fig = go.Figure()
+                for cad in sorted(df7_sku_filter["Cadena"].unique()):
+                    sub = df7_sku_filter[df7_sku_filter["Cadena"]==cad]["Precio"]
+                    fig.add_trace(go.Box(y=sub, name=cad, marker_color=cc(cad),
+                                          boxmean=True, line_width=2))
+                fig.update_layout(**BASE, height=400,
+                                  yaxis=dict(title="Precio ($)", tickprefix="$", tickformat=",",
+                                             tickfont=dict(size=12,color="#111827")),
+                                  xaxis=dict(tickfont=dict(size=12,color="#111827")),
+                                  showlegend=False)
+                st.plotly_chart(fig)
+
+            # ── Mapa semanal de precios por SKU seleccionado ─────────────────────
+            if sku_sel7 != "Todos los SKUs":
+                st.markdown(f'<div class="chart-title">Mapa semanal de precios — {sku_sel7}</div>',
+                            unsafe_allow_html=True)
+                st.markdown('<div class="chart-note">Precio de góndola promedio por semana y cadena. Celda vacía = sin datos ese período</div>',
+                            unsafe_allow_html=True)
+                orden_per7h = sorted(df7_sku_filter["Periodo"].unique(),
+                                     key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
+                hmap_df = (df7_sku_filter
+                           .groupby(["Periodo","Cadena"])["Precio"].mean()
+                           .reset_index())
+                hmap_piv = hmap_df.pivot(index="Cadena", columns="Periodo", values="Precio")
+                # Ordenar columnas cronológicamente
+                hmap_piv = hmap_piv.reindex(columns=[c for c in orden_per7h if c in hmap_piv.columns])
+                if not hmap_piv.empty:
+                    # Texto de cada celda
+                    text_hmap = [
+                        [f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
+                        for row in hmap_piv.values
+                    ]
+                    fig = go.Figure(go.Heatmap(
+                        z=hmap_piv.values,
+                        x=hmap_piv.columns.tolist(),
+                        y=hmap_piv.index.tolist(),
+                        colorscale=[[0,"#EFF6FF"],[0.5,"#3B82F6"],[1,"#1E3A8A"]],
+                        text=text_hmap, texttemplate="%{text}",
+                        textfont=dict(size=12, color="#111827"),
+                        showscale=True,
+                        colorbar=dict(title="Precio ($)", tickprefix="$", tickformat=","),
+                        zsmooth=False,
+                    ))
+                    fig.update_layout(**BASE,
+                                      height=max(200, len(hmap_piv)*50+80),
+                                      xaxis=dict(tickfont=dict(size=12,color="#111827"),
+                                                 side="bottom", tickangle=-20),
+                                      yaxis=dict(tickfont=dict(size=12,color="#111827")))
+                    st.plotly_chart(fig)
+
+            # Tabla detallada
+            st.markdown('<div class="chart-title">Detalle completo de registros</div>',
                         unsafe_allow_html=True)
-            orden_per7 = sorted(df7["Periodo"].unique(),
-                                key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
-            _df_ev_src = df7_sku_filter
-            df7_ev = (_df_ev_src.groupby(["Periodo","SKU_canonico"])["Precio"].mean().reset_index())
-            df7_ev["Periodo"] = pd.Categorical(df7_ev["Periodo"],
-                                                categories=orden_per7, ordered=True)
-            fig = px.line(df7_ev, x="Periodo", y="Precio", color="SKU_canonico",
-                          markers=True, height=420,
-                          labels={"Precio":"Precio promedio ($)","Periodo":"","SKU_canonico":"SKU"})
-            fig.update_traces(line=dict(width=2.5), marker=dict(size=8))
-            fig.update_layout(**BASE,
-                              yaxis=dict(tickprefix="$", tickformat=",",
-                                         tickfont=dict(size=12,color="#111827")),
-                              xaxis=dict(tickfont=dict(size=12,color="#111827")))
-            st.plotly_chart(fig, use_container_width=True)
+            df7_show = (df7_sku_filter[["Periodo","Cadena","SKU_canonico","Gramaje",
+                                        "Precio","Precio_oferta","Descuento_pct","En_oferta"]]
+                        .sort_values(["Periodo","Cadena","Precio"]).copy())
+            df7_show.columns = ["Semana","Cadena","SKU","Gramaje",
+                                 "Precio góndola ($)","Precio oferta ($)","Descuento %","En oferta"]
+            st.dataframe(df7_show, height=400,
+                column_config={
+                    "Precio góndola ($)": st.column_config.NumberColumn(format="$%d"),
+                    "Precio oferta ($)":  st.column_config.NumberColumn(format="$%d"),
+                    "Descuento %":        st.column_config.NumberColumn(format="%.0f%%"),
+                    "En oferta":          st.column_config.CheckboxColumn(),
+                },
+                hide_index=True,
+            )
+
+            # Evolución por SKU canónico si hay varios períodos
+            if df7["Periodo"].nunique() > 1:
+                st.markdown('<div class="chart-title">Evolución de precio por SKU</div>',
+                            unsafe_allow_html=True)
+                orden_per7 = sorted(df7["Periodo"].unique(),
+                                    key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
+                _df_ev_src = df7_sku_filter
+                df7_ev = (_df_ev_src.groupby(["Periodo","SKU_canonico"])["Precio"].mean().reset_index())
+                df7_ev["Periodo"] = pd.Categorical(df7_ev["Periodo"],
+                                                    categories=orden_per7, ordered=True)
+                fig = px.line(df7_ev, x="Periodo", y="Precio", color="SKU_canonico",
+                              markers=True, height=420,
+                              labels={"Precio":"Precio promedio ($)","Periodo":"","SKU_canonico":"SKU"})
+                fig.update_traces(line=dict(width=2.5), marker=dict(size=8))
+                fig.update_layout(**BASE,
+                                  yaxis=dict(tickprefix="$", tickformat=",",
+                                             tickfont=dict(size=12,color="#111827")),
+                                  xaxis=dict(tickfont=dict(size=12,color="#111827")))
+                st.plotly_chart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 6 · COMPARATIVA DE SKUs
@@ -1886,119 +2169,115 @@ with tab6:
                           yaxis=dict(tickprefix="$", tickformat=",",
                                      tickfont=dict(size=12,color="#111827")),
                           xaxis=dict(tickfont=dict(size=12,color="#111827")))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig)
 
         # Mini tabla: ¿hubo oferta ese período?
         if orden_per8:
-            st.markdown('<div class="chart-title">Semanas en oferta</div>',
-                        unsafe_allow_html=True)
-            _of_rows = []
-            for _pe in orden_per8:
-                _of_rows.append({
-                    "Período": _pe,
-                    lbl1[:35]: "✓" if _pe in _of_pers1 else "—",
-                    lbl2[:35]: "✓" if _pe in _of_pers2 else "—",
-                })
-            _of_tbl = pd.DataFrame(_of_rows)
-            st.dataframe(_of_tbl, use_container_width=True,
-                         height=min(400, len(orden_per8)*38+60),
-                         hide_index=True)
+            with st.expander("Semanas en oferta", expanded=True):
+                _of_rows = []
+                for _pe in orden_per8:
+                    _of_rows.append({
+                        "Período": _pe,
+                        lbl1[:35]: "✓" if _pe in _of_pers1 else "—",
+                        lbl2[:35]: "✓" if _pe in _of_pers2 else "—",
+                    })
+                _of_tbl = pd.DataFrame(_of_rows)
+                st.dataframe(_of_tbl,
+                             height=min(400, len(orden_per8)*38+60),
+                             hide_index=True)
 
         # Precio por cadena × período — heatmap para cada SKU
-        st.markdown('<div class="chart-title">Precio por cadena y período</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="chart-note">Precio promedio de góndola por cadena en cada semana/mes</div>',
-                    unsafe_allow_html=True)
+        with st.expander("Precio por cadena y período", expanded=True):
+            st.markdown('<div class="chart-note">Precio promedio de góndola por cadena en cada semana/mes</div>',
+                        unsafe_allow_html=True)
 
-        def _cad_per_heatmap(sku_name, label, color_hi):
-            """Heatmap cadena × período para un SKU dado."""
-            _df_cp = (dff[dff["SKU_canonico"] == sku_name]
-                      .groupby(["Cadena", "Periodo"])["Precio"].mean()
-                      .round(0).unstack("Periodo"))
-            _df_cp = _df_cp.reindex(columns=[p for p in orden_per8 if p in _df_cp.columns])
-            if _df_cp.empty:
-                st.info(f"Sin datos para {label[:40]}")
-                return
-            _txt_cp = [[f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
-                       for row in _df_cp.values]
-            _vmin = float(_df_cp.min().min()) if not _df_cp.empty else 0
-            _vmax = float(_df_cp.max().max()) if not _df_cp.empty else 1
-            _fig_cp = go.Figure(go.Heatmap(
-                z=_df_cp.values,
-                x=_df_cp.columns.tolist(),
-                y=_df_cp.index.tolist(),
-                colorscale=[[0, "#D1FAE5"], [0.5, "#34D399"], [1, color_hi]],
-                zmin=_vmin, zmax=_vmax,
-                text=_txt_cp, texttemplate="%{text}",
-                textfont=dict(size=12, color="#111827"),
-                showscale=False,
-            ))
-            _fig_cp.update_layout(
-                **_BASE_CORE,
-                height=max(220, len(_df_cp) * 44 + 100),
-                margin=dict(l=10, r=10, t=50, b=10),
-                title=dict(text=label[:50], font=dict(size=12, color="#374151"), x=0.01),
-                xaxis=dict(tickfont=dict(size=11, color="#111827"), side="top",
-                           tickangle=-25),
-                yaxis=dict(tickfont=dict(size=12, color="#111827")),
-            )
-            st.plotly_chart(_fig_cp, use_container_width=True)
+            def _cad_per_heatmap(sku_name, label, color_hi):
+                """Heatmap cadena × período para un SKU dado."""
+                _df_cp = (dff[dff["SKU_canonico"] == sku_name]
+                          .groupby(["Cadena", "Periodo"])["Precio"].mean()
+                          .round(0).unstack("Periodo"))
+                _df_cp = _df_cp.reindex(columns=[p for p in orden_per8 if p in _df_cp.columns])
+                if _df_cp.empty:
+                    st.info(f"Sin datos para {label[:40]}")
+                    return
+                _txt_cp = [[f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
+                           for row in _df_cp.values]
+                _vmin = float(_df_cp.min().min()) if not _df_cp.empty else 0
+                _vmax = float(_df_cp.max().max()) if not _df_cp.empty else 1
+                _fig_cp = go.Figure(go.Heatmap(
+                    z=_df_cp.values,
+                    x=_df_cp.columns.tolist(),
+                    y=_df_cp.index.tolist(),
+                    colorscale=[[0, "#D1FAE5"], [0.5, "#34D399"], [1, color_hi]],
+                    zmin=_vmin, zmax=_vmax,
+                    text=_txt_cp, texttemplate="%{text}",
+                    textfont=dict(size=12, color="#111827"),
+                    showscale=False,
+                ))
+                _fig_cp.update_layout(
+                    **_BASE_CORE,
+                    height=max(220, len(_df_cp) * 44 + 100),
+                    margin=dict(l=10, r=10, t=50, b=10),
+                    title=dict(text=label[:50], font=dict(size=12, color="#374151"), x=0.01),
+                    xaxis=dict(tickfont=dict(size=11, color="#111827"), side="top",
+                               tickangle=-25),
+                    yaxis=dict(tickfont=dict(size=12, color="#111827")),
+                )
+                st.plotly_chart(_fig_cp)
 
-        _col_cp1, _col_cp2 = st.columns(2, gap="large")
-        with _col_cp1:
-            _cad_per_heatmap(sku_c1, lbl1, "#065F46")
-        with _col_cp2:
-            _cad_per_heatmap(sku_c2, lbl2, "#7C1D2D")
+            _col_cp1, _col_cp2 = st.columns(2, gap="large")
+            with _col_cp1:
+                _cad_per_heatmap(sku_c1, lbl1, "#065F46")
+            with _col_cp2:
+                _cad_per_heatmap(sku_c2, lbl2, "#7C1D2D")
 
         # Tabla comparativa por cadena en el último período disponible
-        st.markdown('<div class="chart-title">Precio por cadena · último período disponible</div>',
-                    unsafe_allow_html=True)
-        ult_per8 = orden_per8[-1] if orden_per8 else None
-        if ult_per8:
-            df_cmp_tbl = dff[(dff["Periodo"]==ult_per8) &
-                              (dff["SKU_canonico"].isin([sku_c1, sku_c2]))]
-            df_cmp_tbl = df_cmp_tbl[["Cadena","SKU_canonico","Gramaje","Precio","En_oferta"]].copy()
-            df_cmp_tbl.columns = ["Cadena","SKU","Gramaje","Precio góndola ($)","En oferta"]
-            st.dataframe(df_cmp_tbl.sort_values(["SKU","Cadena"]),
-                use_container_width=True, height=300,
-                column_config={
-                    "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
-                    "En oferta":         st.column_config.CheckboxColumn(),
-                },
-                hide_index=True,
-            )
+        with st.expander("Precio por cadena · último período disponible", expanded=True):
+            ult_per8 = orden_per8[-1] if orden_per8 else None
+            if ult_per8:
+                df_cmp_tbl = dff[(dff["Periodo"]==ult_per8) &
+                                  (dff["SKU_canonico"].isin([sku_c1, sku_c2]))]
+                df_cmp_tbl = df_cmp_tbl[["Cadena","SKU_canonico","Gramaje","Precio","En_oferta"]].copy()
+                df_cmp_tbl.columns = ["Cadena","SKU","Gramaje","Precio góndola ($)","En oferta"]
+                st.dataframe(df_cmp_tbl.sort_values(["SKU","Cadena"]),
+                    height=300,
+                    column_config={
+                        "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
+                        "En oferta":         st.column_config.CheckboxColumn(),
+                    },
+                    hide_index=True,
+                )
 
         # Diferencia de precio entre los dos SKUs por período
         if df_comp["Periodo"].nunique() > 1:
-            st.markdown('<div class="chart-title">Diferencia de precio entre SKUs por período</div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="chart-note">Verde = SKU 1 más barato · Rojo = SKU 2 más barato</div>',
-                        unsafe_allow_html=True)
-            piv_comp = df_comp.pivot(index="Periodo", columns="SKU", values="Precio")
-            if lbl1 in piv_comp.columns and lbl2 in piv_comp.columns:
-                piv_comp["Diferencia"] = piv_comp[lbl1] - piv_comp[lbl2]
-                piv_comp = piv_comp.dropna(subset=["Diferencia"]).reset_index()
-                fig = go.Figure(go.Bar(
-                    x=piv_comp["Periodo"], y=piv_comp["Diferencia"],
-                    marker_color=["#00B050" if v <= 0 else "#EF4444"
-                                  for v in piv_comp["Diferencia"]],
-                    text=[f"${v:+,.0f}" for v in piv_comp["Diferencia"]],
-                    textposition="outside",
-                    textfont=dict(size=12, color="#111827"),
-                    cliponaxis=False,
-                ))
-                fig.update_layout(**_BASE_CORE, height=320,
-                                  margin=dict(l=10,r=10,t=60,b=40),
-                                  xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
-                                  yaxis=dict(title="Diferencia ($)", tickprefix="$",
-                                             tickformat=",", tickfont=dict(size=12,color="#111827")),
-                                  showlegend=False,
-                                  shapes=[dict(type="line", x0=-0.5, x1=len(piv_comp)-0.5,
-                                               y0=0, y1=0,
-                                               line=dict(color="#9CA3AF",width=1.5,dash="dot"))],
-                                  title=dict(text=f"{lbl1[:30]} vs {lbl2[:30]}",
-                                             font=dict(size=12,color="#6B7280"), x=0.01))
-                st.plotly_chart(fig, use_container_width=True)
+            with st.expander("Diferencia de precio entre SKUs por período", expanded=True):
+                st.markdown('<div class="chart-note">Verde = SKU 1 más barato · Rojo = SKU 2 más barato</div>',
+                            unsafe_allow_html=True)
+                piv_comp = df_comp.pivot(index="Periodo", columns="SKU", values="Precio")
+                if lbl1 in piv_comp.columns and lbl2 in piv_comp.columns:
+                    piv_comp["Diferencia"] = piv_comp[lbl1] - piv_comp[lbl2]
+                    piv_comp = piv_comp.dropna(subset=["Diferencia"]).reset_index()
+                    fig = go.Figure(go.Bar(
+                        x=piv_comp["Periodo"], y=piv_comp["Diferencia"],
+                        marker_color=["#00B050" if v <= 0 else "#EF4444"
+                                      for v in piv_comp["Diferencia"]],
+                        text=[f"${v:+,.0f}" for v in piv_comp["Diferencia"]],
+                        textposition="outside",
+                        textfont=dict(size=12, color="#111827"),
+                        cliponaxis=False,
+                    ))
+                    fig.update_layout(**_BASE_CORE, height=320,
+                                      margin=dict(l=10,r=10,t=60,b=40),
+                                      xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
+                                      yaxis=dict(title="Diferencia ($)", tickprefix="$",
+                                                 tickformat=",", tickfont=dict(size=12,color="#111827")),
+                                      showlegend=False,
+                                      shapes=[dict(type="line", x0=-0.5, x1=len(piv_comp)-0.5,
+                                                   y0=0, y1=0,
+                                                   line=dict(color="#9CA3AF",width=1.5,dash="dot"))],
+                                      title=dict(text=f"{lbl1[:30]} vs {lbl2[:30]}",
+                                                 font=dict(size=12,color="#6B7280"), x=0.01))
+                    st.plotly_chart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 7 · MI MARCA
@@ -2029,18 +2308,34 @@ with tab7:
         st.markdown('<div class="chart-title">📍 Posicionamiento de precio relativo</div>',
                     unsafe_allow_html=True)
 
-        _mm_pl_marca = _mm_dff.dropna(subset=["Precio_litro"])
-        _mm_pl_resto = _mm_resto.dropna(subset=["Precio_litro"])
-
-        _mm_avg_marca = _mm_pl_marca["Precio_litro"].mean() if not _mm_pl_marca.empty else 0
-        _mm_avg_merc  = _mm_pl_resto["Precio_litro"].mean() if not _mm_pl_resto.empty else 0
-        _mm_prima     = ((_mm_avg_marca / _mm_avg_merc) - 1) * 100 if _mm_avg_merc > 0 else 0
+        # Modo de los KPIs sigue el toggle de la barra
+        _mm_kpi_modo = st.session_state.get("mm_modo_bar", "$/Litro")
+        if _mm_kpi_modo == "$/Litro":
+            _mm_pl_marca = _mm_dff.dropna(subset=["Precio_litro"])
+            _mm_pl_resto = _mm_resto.dropna(subset=["Precio_litro"])
+            _mm_avg_marca = _mm_pl_marca["Precio_litro"].mean() if not _mm_pl_marca.empty else 0
+            _mm_avg_merc  = _mm_pl_resto["Precio_litro"].mean() if not _mm_pl_resto.empty else 0
+            _mm_kpi_lbl1, _mm_kpi_lbl2 = "$/L marca", "$/L mercado"
+            _mm_kpi_sub1 = f"promedio {_mm_sel}"
+            _mm_kpi_sub2 = "promedio resto marcas"
+        else:
+            _mm_avg_marca = _mm_dff["Precio"].mean() if not _mm_dff.empty else 0
+            _mm_avg_merc  = _mm_resto["Precio"].mean() if not _mm_resto.empty else 0
+            _mm_kpi_lbl1, _mm_kpi_lbl2 = "$ góndola marca", "$ góndola mercado"
+            _mm_kpi_sub1 = f"precio prom. {_mm_sel}"
+            _mm_kpi_sub2 = "precio prom. resto marcas"
+        # Prima siempre en $/L vs TODO el mercado (no solo "el resto")
+        _mm_pl_all = dff.dropna(subset=["Precio_litro"])
+        _mm_avg_marca_pl = (_mm_dff.dropna(subset=["Precio_litro"])["Precio_litro"].mean()
+                            if not _mm_dff.dropna(subset=["Precio_litro"]).empty else 0)
+        _mm_avg_mkt_pl   = _mm_pl_all["Precio_litro"].mean() if not _mm_pl_all.empty else 0
+        _mm_prima = ((_mm_avg_marca_pl / _mm_avg_mkt_pl) - 1) * 100 if _mm_avg_mkt_pl > 0 else 0
         _mm_cadenas   = _mm_dff["Cadena"].nunique()
 
         _mm_k1, _mm_k2, _mm_k3, _mm_k4 = st.columns(4)
         _mm_kpis = [
-            ("orange", "$/L marca",       f"${_mm_avg_marca:,.0f}", f"promedio {_mm_sel}"),
-            ("",       "$/L mercado",     f"${_mm_avg_merc:,.0f}",  "promedio resto marcas"),
+            ("orange", _mm_kpi_lbl1,      f"${_mm_avg_marca:,.0f}", _mm_kpi_sub1),
+            ("",       _mm_kpi_lbl2,      f"${_mm_avg_merc:,.0f}",  _mm_kpi_sub2),
             ("red" if _mm_prima > 0 else "green",
                        "Prima vs mercado",
                        f"{_mm_prima:+.1f}%",
@@ -2118,7 +2413,7 @@ with tab7:
                     yaxis=dict(tickfont=dict(size=11, color="#111827")),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_mm_bar, use_container_width=True)
+                st.plotly_chart(fig_mm_bar)
 
         # ── B) Presencia por cadena — heatmap SKU × cadena ───────────────
         st.markdown("<br>", unsafe_allow_html=True)
@@ -2148,7 +2443,7 @@ with tab7:
                 xaxis=dict(tickfont=dict(size=12,color="#111827"), side="top"),
                 yaxis=dict(tickfont=dict(size=11,color="#111827")),
             )
-            st.plotly_chart(fig_mm_h, use_container_width=True)
+            st.plotly_chart(fig_mm_h)
 
         # KPIs chicos: presencia en cadenas por SKU
         _mm_cad_x_sku = (_mm_heat_src.groupby("SKU_canonico")["Cadena"]
@@ -2225,7 +2520,7 @@ with tab7:
                                      yaxis=dict(tickprefix="$",tickformat=",",
                                                 tickfont=dict(size=12,color="#111827")),
                                      xaxis=dict(tickfont=dict(size=12,color="#111827")))
-        st.plotly_chart(fig_mm_ev, use_container_width=True)
+        st.plotly_chart(fig_mm_ev)
 
         # ── D) Comportamiento de ofertas ─────────────────────────────────
         st.markdown("<br>", unsafe_allow_html=True)
@@ -2269,7 +2564,7 @@ with tab7:
                 f"<div style='background:#FFF7ED;border-radius:10px;padding:0.8rem 1rem;"
                 f"border-left:3px solid #F97316'>"
                 f"<span style='font-size:0.65rem;text-transform:uppercase;color:#9CA3AF'>"
-                f"% registros en oferta · {_mm_sel}</span><br>"
+                f"% del portfolio con descuento · {_mm_sel}</span><br>"
                 f"<span style='font-size:1.6rem;font-weight:800;color:#111827'>"
                 f"{_mm_pct_of_marca:.1f}%</span></div>",
                 unsafe_allow_html=True)
@@ -2287,7 +2582,7 @@ with tab7:
 
         st.markdown("<br>", unsafe_allow_html=True)
         if not _mm_of_tbl.empty:
-            st.dataframe(_mm_of_tbl, use_container_width=True,
+            st.dataframe(_mm_of_tbl,
                          height=min(400, len(_mm_of_tbl)*38+60), hide_index=True,
                          column_config={
                              "% sem. en oferta": st.column_config.NumberColumn(format="%.1f%%"),
@@ -2318,314 +2613,10 @@ with tab7:
             })
         if _mm_dist_rows:
             _mm_dist_df = pd.DataFrame(_mm_dist_rows).sort_values(["Estado","SKU"])
-            st.dataframe(_mm_dist_df, use_container_width=True,
+            st.dataframe(_mm_dist_df,
                          height=min(500, len(_mm_dist_df)*38+60), hide_index=True)
         else:
             st.info("Sin datos de distribución para esta marca.")
-
-# ══════════════════════════════════════════════════════════════════════════
-# TAB 8 · INSIGHTS
-# ══════════════════════════════════════════════════════════════════════════
-with tab8:
-
-    def _insight_card(icon, titulo, valor, detalle, color="#0F3460"):
-        st.markdown(f"""
-        <div style="background:#FFFFFF;border-radius:12px;padding:0.9rem 1.1rem;
-                    border-left:4px solid {color};
-                    box-shadow:0 1px 6px rgba(0,0,0,0.07)">
-          <div style="font-size:1.2rem;margin-bottom:0.2rem">{icon}</div>
-          <div style="font-size:0.65rem;color:#6B7280;text-transform:uppercase;
-                      letter-spacing:0.5px;margin-bottom:0.12rem">{titulo}</div>
-          <div style="font-size:1.1rem;font-weight:800;color:#111827;
-                      line-height:1.2;margin-bottom:0.18rem">{valor}</div>
-          <div style="font-size:0.71rem;color:#374151;line-height:1.4">{detalle}</div>
-        </div>""", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="font-size:0.75rem;color:#6B7280;margin-bottom:1.2rem">
-      Análisis estadístico calculado sobre los datos con los filtros activos del panel lateral.
-    </div>""", unsafe_allow_html=True)
-
-    # ── cómputos ──────────────────────────────────────────────────────────
-    _ins = dff.copy()
-    _ins_pl = _ins.dropna(subset=["Precio_litro"])
-
-    _by_marca = (_ins.groupby("Marca_raw").agg(
-        precio_medio  =("Precio","mean"),
-        precio_mediana=("Precio","median"),
-        precio_min    =("Precio","min"),
-        precio_max    =("Precio","max"),
-        precio_std    =("Precio","std"),
-        n             =("Precio","count"),
-    ).assign(cv=lambda d: d["precio_std"]/d["precio_medio"]*100).reset_index())
-
-    # Precio/litro correcto:
-    # 1) media por (Marca, SKU, Cadena) → cada combo cuenta como 1
-    # 2) media por (Marca, SKU) promediando cadenas
-    # 3) media por Marca promediando SKUs
-    _pl_s1 = (_ins_pl
-              .groupby(["Marca_raw","SKU_canonico","Cadena"])["Precio_litro"]
-              .mean().reset_index())
-    _pl_s2 = (_pl_s1
-              .groupby(["Marca_raw","SKU_canonico"])["Precio_litro"]
-              .mean().reset_index())
-    _by_marca_pl = (_pl_s2
-                    .groupby("Marca_raw")["Precio_litro"]
-                    .mean().reset_index()
-                    .rename(columns={"Precio_litro":"pl_medio"}))
-    _by_marca = _by_marca.merge(_by_marca_pl, on="Marca_raw", how="left")
-
-    _of_ins   = df_full[df_full["Cadena"].isin(cadenas_sel)].copy()
-    _of_rate  = (_of_ins.groupby("Marca_raw")
-                 .apply(lambda d: d["En_oferta"].mean()*100)
-                 .reset_index(name="pct_oferta"))
-    _desc_m   = (_of_ins[_of_ins["En_oferta"]]
-                 .groupby("Marca_raw")["Descuento_pct"]
-                 .mean().reset_index(name="desc_medio"))
-    _by_marca = _by_marca.merge(_of_rate, on="Marca_raw", how="left").merge(_desc_m, on="Marca_raw", how="left")
-
-    _by_cadena = (_ins.groupby("Cadena").agg(precio_medio=("Precio","mean"), n=("Precio","count")).reset_index())
-    # Precio/litro por cadena: media de SKUs (cada SKU cuenta como 1 por cadena)
-    _cadena_pl_s1 = (_ins_pl.groupby(["Cadena","SKU_canonico"])["Precio_litro"]
-                     .mean().reset_index())
-    _by_cadena_pl = (_cadena_pl_s1.groupby("Cadena")["Precio_litro"]
-                     .mean().reset_index(name="pl_medio"))
-    _by_cadena = _by_cadena.merge(_by_cadena_pl, on="Cadena", how="left")
-
-    _dest_ins   = _by_marca[_by_marca["Marca_raw"].isin(MARCAS_DESTACADAS) & (_by_marca["n"]>=3)]
-    _marca_cara   = _dest_ins.loc[_dest_ins["pl_medio"].idxmax()]   if not _dest_ins.empty else None
-    _marca_barata = _dest_ins.loc[_dest_ins["pl_medio"].idxmin()]   if not _dest_ins.empty else None
-    _marca_estable= _dest_ins.loc[_dest_ins["cv"].idxmin()]         if not _dest_ins.empty else None
-    _marca_volat  = _dest_ins.loc[_dest_ins["cv"].idxmax()]         if not _dest_ins.empty else None
-    _marca_of_tbl = (_by_marca[_by_marca["Marca_raw"].isin(MARCAS_DESTACADAS)]
-                     .dropna(subset=["pct_oferta"]).sort_values("pct_oferta", ascending=False))
-    _cadena_barata = _by_cadena.sort_values("pl_medio").iloc[0]  if not _by_cadena.empty else None
-    _cadena_cara   = _by_cadena.sort_values("pl_medio").iloc[-1] if not _by_cadena.empty else None
-    # SKU más barato: media de (SKU × cadena), cada cadena cuenta como 1
-    _sku_pl_s1 = (_ins_pl.groupby(["SKU_canonico","Cadena"])["Precio_litro"]
-                  .mean().reset_index())
-    _sku_pl = (_sku_pl_s1.groupby("SKU_canonico")
-               .agg(pl=("Precio_litro","mean"), n=("Cadena","count"))
-               .reset_index().query("n>=2").sort_values("pl"))
-    _sku_barato = _sku_pl.iloc[0]  if not _sku_pl.empty else None
-    _sku_caro   = _sku_pl.iloc[-1] if not _sku_pl.empty else None
-    _brecha_pct = ((_marca_cara["pl_medio"]/_marca_barata["pl_medio"]-1)*100
-                   if _marca_cara is not None and _marca_barata is not None else None)
-    _brecha_prod_pct = ((_sku_caro["pl"]/_sku_barato["pl"]-1)*100
-                        if _sku_caro is not None and _sku_barato is not None else None)
-
-    # ── FILA 1: precio/litro por gramaje (250 ml y 500 ml) ────────────────
-    st.markdown('<div class="chart-title">💰 Precio por litro · 250 ml y 500 ml</div>', unsafe_allow_html=True)
-
-    def _sku_extremos_gramaje(df_pl, df_all, gramaje_label):
-        _g = (df_pl[df_pl["Gramaje"] == gramaje_label]
-              .groupby(["SKU_canonico", "Cadena"])["Precio_litro"].mean().reset_index())
-        _g2 = (_g.groupby("SKU_canonico")
-                 .agg(pl=("Precio_litro", "mean"), n=("Cadena", "count"))
-                 .reset_index().sort_values("pl"))
-        if _g2.empty:
-            return None, None
-        _gond = (df_all[df_all["Gramaje"] == gramaje_label]
-                 .groupby("SKU_canonico")["Precio"].mean().reset_index()
-                 .rename(columns={"Precio": "precio_gond"}))
-        _g2 = _g2.merge(_gond, on="SKU_canonico", how="left")
-        return _g2.iloc[0], _g2.iloc[-1]
-
-    _b250, _c250 = _sku_extremos_gramaje(_ins_pl, _ins, "250 ml")
-    _b500, _c500 = _sku_extremos_gramaje(_ins_pl, _ins, "500 ml")
-
-    _c1a, _c1b, _c1c, _c1d = st.columns(4, gap="medium")
-    with _c1a:
-        if _b250 is not None:
-            _insight_card("🏆", "Más barato · 250 ml",
-                _b250["SKU_canonico"],
-                f"Góndola ${_b250['precio_gond']:,.0f} · ${_b250['pl']:,.0f}/L · {int(_b250['n'])} cadena(s)",
-                "#16A34A")
-    with _c1b:
-        if _c250 is not None:
-            _insight_card("💎", "Más caro · 250 ml",
-                _c250["SKU_canonico"],
-                f"Góndola ${_c250['precio_gond']:,.0f} · ${_c250['pl']:,.0f}/L · {int(_c250['n'])} cadena(s)",
-                "#7C3AED")
-    with _c1c:
-        if _b500 is not None:
-            _insight_card("🏆", "Más barato · 500 ml",
-                _b500["SKU_canonico"],
-                f"Góndola ${_b500['precio_gond']:,.0f} · ${_b500['pl']:,.0f}/L · {int(_b500['n'])} cadena(s)",
-                "#16A34A")
-    with _c1d:
-        if _c500 is not None:
-            _insight_card("💎", "Más caro · 500 ml",
-                _c500["SKU_canonico"],
-                f"Góndola ${_c500['precio_gond']:,.0f} · ${_c500['pl']:,.0f}/L · {int(_c500['n'])} cadena(s)",
-                "#7C3AED")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── FILA 2: estabilidad ───────────────────────────────────────────────
-    st.markdown('<div class="chart-title">📉 Variabilidad de precios</div>', unsafe_allow_html=True)
-    _c2a, _c2b, _c2c = st.columns(3, gap="medium")
-    with _c2a:
-        if _marca_estable is not None:
-            _insight_card("🎯","Precio más estable",
-                _marca_estable["Marca_raw"],
-                f"CV {_marca_estable['cv']:.1f}% · rango ${_marca_estable['precio_min']:,.0f}–${_marca_estable['precio_max']:,.0f}",
-                "#0369A1")
-    with _c2b:
-        if _marca_volat is not None:
-            _insight_card("📊","Precio más variable",
-                _marca_volat["Marca_raw"],
-                f"CV {_marca_volat['cv']:.1f}% · rango ${_marca_volat['precio_min']:,.0f}–${_marca_volat['precio_max']:,.0f}",
-                "#EA580C")
-    with _c2c:
-        _p25 = float(_ins["Precio"].quantile(0.25))
-        _p75 = float(_ins["Precio"].quantile(0.75))
-        _insight_card("📦","Rango IQR del mercado",
-            f"${_p25:,.0f} – ${_p75:,.0f}",
-            f"El 50% central de productos · mediana ${_ins['Precio'].median():,.0f}",
-            "#374151")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── FILA 3: ofertas ───────────────────────────────────────────────────
-    st.markdown('<div class="chart-title">🏷️ Comportamiento de ofertas</div>', unsafe_allow_html=True)
-    _c3a, _c3b, _c3c = st.columns(3, gap="medium")
-    with _c3a:
-        if not _marca_of_tbl.empty:
-            _mo = _marca_of_tbl.iloc[0]
-            _insight_card("🔥","Marca con más ofertas",
-                _mo["Marca_raw"],
-                f"{_mo['pct_oferta']:.0f}% de registros en oferta · "
-                f"dto. prom. {_mo.get('desc_medio',0):.0f}%",
-                "#DC2626")
-    with _c3b:
-        _cadena_of = (_of_ins.groupby("Cadena")
-                      .apply(lambda d: d["En_oferta"].mean()*100)
-                      .reset_index(name="pct").sort_values("pct", ascending=False))
-        if not _cadena_of.empty:
-            _co = _cadena_of.iloc[0]
-            _insight_card("🏪","Cadena con más ofertas",
-                _co["Cadena"],
-                f"{_co['pct']:.0f}% de sus productos están en oferta en el período",
-                "#B45309")
-    with _c3c:
-        _desc_cad = (_of_ins[_of_ins["En_oferta"]]
-                     .groupby("Cadena")["Descuento_pct"].mean()
-                     .reset_index().sort_values("Descuento_pct", ascending=False))
-        if not _desc_cad.empty:
-            _dc = _desc_cad.iloc[0]
-            _insight_card("💸","Mayor descuento promedio por cadena",
-                _dc["Cadena"],
-                f"Descuento medio {_dc['Descuento_pct']:.0f}% sobre precio góndola",
-                "#065F46")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── FILA 4: cadenas + cobertura ───────────────────────────────────────
-    st.markdown('<div class="chart-title">🏬 Cadenas y cobertura</div>', unsafe_allow_html=True)
-    _c4a, _c4b, _c4c = st.columns(3, gap="medium")
-    with _c4a:
-        if _cadena_barata is not None:
-            _insight_card("✅","Cadena más barata ($/L)",
-                _cadena_barata["Cadena"],
-                f"${_cadena_barata['pl_medio']:,.0f}/L promedio · {int(_cadena_barata['n'])} productos",
-                "#16A34A")
-    with _c4b:
-        if _cadena_cara is not None:
-            _insight_card("🏅","Cadena más cara ($/L)",
-                _cadena_cara["Cadena"],
-                f"${_cadena_cara['pl_medio']:,.0f}/L promedio · {int(_cadena_cara['n'])} productos",
-                "#7C3AED")
-    with _c4c:
-        _cob = (_ins.groupby("Cadena")["SKU_canonico"].nunique()
-                .reset_index(name="n").sort_values("n", ascending=False))
-        if not _cob.empty:
-            _mc = _cob.iloc[0]
-            _insight_card("🗺️","Mayor catálogo de productos",
-                _mc["Cadena"],
-                f"{_mc['n']} SKUs distintos listados · mayor cobertura de mercado",
-                "#0F3460")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── FILA 5: SKU destacado + variedad ─────────────────────────────────
-    st.markdown('<div class="chart-title">🔍 Producto y variedad</div>', unsafe_allow_html=True)
-    _c5a, _c5b, _c5c = st.columns(3, gap="medium")
-    with _c5a:
-        if _sku_barato is not None:
-            _insight_card("💡","SKU con mejor precio/litro",
-                _sku_barato["SKU_canonico"][:38],
-                f"${_sku_barato['pl']:,.0f}/L · {int(_sku_barato['n'])} registros",
-                "#0369A1")
-    with _c5b:
-        _smarca = (_ins.groupby("Marca_raw")["SKU_canonico"].nunique()
-                   .reset_index(name="n_skus").sort_values("n_skus", ascending=False))
-        if not _smarca.empty:
-            _msm = _smarca.iloc[0]
-            _insight_card("📦","Marca con más variedad",
-                _msm["Marca_raw"],
-                f"{_msm['n_skus']} SKUs distintos en las cadenas seleccionadas",
-                "#0F3460")
-    with _c5c:
-        _total_skus = _ins["SKU_canonico"].nunique()
-        _total_cad  = _ins["Cadena"].nunique()
-        _insight_card("📡","Cobertura total del dataset",
-            f"{_total_skus} SKUs únicos",
-            f"En {_total_cad} cadenas · {len(_ins):,} registros totales en el período",
-            "#374151")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Tabla resumen estadístico por marca ───────────────────────────────
-    st.markdown('<div class="chart-title">📋 Tabla resumen estadístico por marca</div>', unsafe_allow_html=True)
-    _tbl_ins = (_by_marca[_by_marca["n"]>=3]
-                .sort_values("pl_medio", na_position="last")
-                [["Marca_raw","n","precio_medio","precio_mediana",
-                  "precio_min","precio_max","cv","pl_medio","pct_oferta","desc_medio"]]
-                .copy())
-    _tbl_ins.columns = ["Marca","Registros","Precio medio ($)","Mediana ($)",
-                        "Mínimo ($)","Máximo ($)","CV (%)","$/L promedio",
-                        "% en oferta","Dto. prom. (%)"]
-    st.dataframe(_tbl_ins.reset_index(drop=True), use_container_width=True,
-        height=min(480, len(_tbl_ins)*38+60), hide_index=True,
-        column_config={
-            "Precio medio ($)":st.column_config.NumberColumn(format="$%d"),
-            "Mediana ($)":     st.column_config.NumberColumn(format="$%d"),
-            "Mínimo ($)":      st.column_config.NumberColumn(format="$%d"),
-            "Máximo ($)":      st.column_config.NumberColumn(format="$%d"),
-            "$/L promedio":    st.column_config.NumberColumn(format="$%d"),
-            "CV (%)":          st.column_config.NumberColumn(format="%.1f%%"),
-            "% en oferta":     st.column_config.NumberColumn(format="%.0f%%"),
-            "Dto. prom. (%)":  st.column_config.NumberColumn(format="%.0f%%"),
-        })
-    st.markdown(
-        "<div style='font-size:0.72rem;color:#9CA3AF;margin-top:0.3rem'>"
-        "💡 Precios nominales (pesos corrientes). "
-        f"Inflación mensual configurada: {inflacion_mensual:.1f}% "
-        "— activar ajuste en el tab Evolución para ver pesos reales.</div>",
-        unsafe_allow_html=True)
-
-    # ── Gráfico: precio/litro ranking por marca destacada ─────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="chart-title">Precio promedio por litro · marcas destacadas</div>', unsafe_allow_html=True)
-    _pl_chart = (_by_marca[_by_marca["Marca_raw"].isin(MARCAS_DESTACADAS)]
-                 .dropna(subset=["pl_medio"]).sort_values("pl_medio"))
-    if not _pl_chart.empty:
-        _fig_ins = go.Figure(go.Bar(
-            x=_pl_chart["pl_medio"], y=_pl_chart["Marca_raw"],
-            orientation="h",
-            marker_color=[COLORES_CAT.get(m,"#9CA3AF") for m in _pl_chart["Marca_raw"]],
-            text=[f"${v:,.0f}/L" for v in _pl_chart["pl_medio"]],
-            textposition="outside", textfont=dict(size=12, color="#111827"), cliponaxis=False,
-        ))
-        _fig_ins.update_layout(**_BASE_CORE, height=300,
-            margin=dict(l=10,r=160,t=20,b=20),
-            xaxis=dict(title="$/L promedio", tickprefix="$", tickformat=",",
-                       tickfont=dict(size=11,color="#111827"),
-                       range=[0, float(_pl_chart["pl_medio"].max())*1.35]),
-            yaxis=dict(tickfont=dict(size=13,color="#111827")),
-            showlegend=False)
-        st.plotly_chart(_fig_ins, use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 9 · QUIEBRES DE STOCK
@@ -2650,16 +2641,19 @@ with tab9:
         _qb_marcas_opts = sorted(df_full["Marca_raw"].unique())
         _qb_marca = st.selectbox("🏷️ Marca", _qb_marcas_opts, key="qb_marca")
     with _qb_fb:
-        _qb_cadenas_opts = sorted(df_full[df_full["Marca_raw"] == _qb_marca]["Cadena"].unique())
+        _qb_cadenas_opts = ["Todas las cadenas"] + sorted(df_full[df_full["Marca_raw"] == _qb_marca]["Cadena"].unique())
         _qb_cadena = st.selectbox("🏪 Cadena", _qb_cadenas_opts, key="qb_cadena")
     with _qb_fc:
         _qb_gran = st.selectbox("📅 Granularidad", ["Semanal", "Mensual", "Diario"], key="qb_gran")
 
-    # Fuente: marca + cadena seleccionadas
-    _qb_src = df_full[
-        (df_full["Marca_raw"] == _qb_marca) &
-        (df_full["Cadena"] == _qb_cadena)
-    ].copy()
+    # Fuente: marca + (cadena o todas)
+    if _qb_cadena == "Todas las cadenas":
+        _qb_src = df_full[df_full["Marca_raw"] == _qb_marca].copy()
+    else:
+        _qb_src = df_full[
+            (df_full["Marca_raw"] == _qb_marca) &
+            (df_full["Cadena"] == _qb_cadena)
+        ].copy()
 
     if _qb_src.empty:
         st.info("Sin datos para la selección.")
@@ -2728,7 +2722,7 @@ with tab9:
                            side="bottom", tickangle=-20),
                 yaxis=dict(tickfont=dict(size=11, color="#111827")),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig)
 
             # Tabla resumen por SKU
             _qb_n_breaks = (_qb_status == -1).sum(axis=1)
@@ -2751,9 +2745,98 @@ with tab9:
                     })
                 _qb_sum_col, _ = st.columns([3, 1])
                 with _qb_sum_col:
-                    st.dataframe(pd.DataFrame(_qb_rows), use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(_qb_rows), hide_index=True)
             else:
                 st.success("✅ No se detectaron quiebres en el período seleccionado.")
+
+    # ── Presencia actual: SKU × Cadena ────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="chart-title">📍 Presencia por cadena — SKU × Cadena</div>',
+                unsafe_allow_html=True)
+
+    if not _qb_src.empty:
+        # Construir lista de períodos disponibles según granularidad
+        _qb_src_marca = df_full[df_full["Marca_raw"] == _qb_marca].copy()
+        _qb_fechas_disp = sorted(df_full["Fecha"].unique())
+
+        if _qb_gran == "Diario":
+            _qb_per_labels = [pd.Timestamp(f).strftime("%d/%m/%Y") for f in _qb_fechas_disp]
+            _qb_per_map = {lbl: [f] for lbl, f in zip(_qb_per_labels, _qb_fechas_disp)}
+        elif _qb_gran == "Mensual":
+            _seen_mes: dict = {}
+            for _f in _qb_fechas_disp:
+                _k = pd.Timestamp(_f).strftime("%b %Y")
+                if _k not in _seen_mes:
+                    _seen_mes[_k] = []
+                _seen_mes[_k].append(_f)
+            _qb_per_labels = list(_seen_mes.keys())
+            _qb_per_map = _seen_mes
+        else:  # Semanal
+            _seen_sem: dict = {}
+            for _f in _qb_fechas_disp:
+                _ts = pd.Timestamp(_f)
+                _k = f"Sem {_ts.isocalendar().week} · {_ts.strftime('%b %Y')}"
+                if _k not in _seen_sem:
+                    _seen_sem[_k] = []
+                _seen_sem[_k].append(_f)
+            _qb_per_labels = list(_seen_sem.keys())
+            _qb_per_map = _seen_sem
+
+        _pres_sel_lbl = st.selectbox(
+            "🗓️ Período a visualizar",
+            _qb_per_labels,
+            index=len(_qb_per_labels) - 1,
+            key="qb_pres_ventana",
+        )
+        _pres_fechas_sel = _qb_per_map[_pres_sel_lbl]
+
+        st.markdown(
+            f'<div class="chart-note">'
+            f'🟢 activo en al menos 1 scrape de <b>{_pres_sel_lbl}</b> &nbsp;·&nbsp; '
+            f'🔴 estuvo antes pero no en este período &nbsp;·&nbsp; — nunca en esa cadena.'
+            f'</div>',
+            unsafe_allow_html=True)
+
+        # Presencia acumulada: aparece en CUALQUIER scrape del período seleccionado
+        _qb_ventana_df = _qb_src_marca[_qb_src_marca["Fecha"].isin(_pres_fechas_sel)]
+        _qb_pres_set = set(zip(_qb_ventana_df["SKU_canonico"], _qb_ventana_df["Cadena"]))
+
+        # SKUs históricos de la marca + todas las cadenas
+        _qb_todos_skus = sorted(_qb_src_marca["SKU_canonico"].unique())
+        _qb_todas_cad  = sorted(df_full["Cadena"].unique())
+        # Combinaciones que alguna vez existieron (para distinguir rojo de gris)
+        _qb_historial_set = set(zip(_qb_src_marca["SKU_canonico"], _qb_src_marca["Cadena"]))
+
+        _qb_z, _qb_txt = [], []
+        for _sk in _qb_todos_skus:
+            _row_z, _row_t = [], []
+            for _cd in _qb_todas_cad:
+                if (_sk, _cd) in _qb_pres_set:
+                    _row_z.append(1); _row_t.append("✓")
+                elif (_sk, _cd) in _qb_historial_set:
+                    _row_z.append(-1); _row_t.append("✗")
+                else:
+                    _row_z.append(0); _row_t.append("—")
+            _qb_z.append(_row_z)
+            _qb_txt.append(_row_t)
+
+        _qb_pres_h = max(200, len(_qb_todos_skus)*38 + 80)
+        fig_pres = go.Figure(go.Heatmap(
+            z=_qb_z,
+            x=_qb_todas_cad,
+            y=_qb_todos_skus,
+            colorscale=_qb_colorscale, zmin=-1, zmax=1,
+            text=_qb_txt, texttemplate="%{text}",
+            textfont=dict(size=13, color="#111827"),
+            showscale=False, xgap=3, ygap=3,
+        ))
+        fig_pres.update_layout(
+            **BASE,
+            height=_qb_pres_h,
+            xaxis=dict(tickfont=dict(size=12, color="#111827"), side="top"),
+            yaxis=dict(tickfont=dict(size=11, color="#111827")),
+        )
+        st.plotly_chart(fig_pres)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 11 · TABLA DINÁMICA
@@ -2818,6 +2901,9 @@ with tab11:
     _td_cols_ord = _td_cols_sel
 
     _td_src = dff.copy()
+    # Fecha como string para evitar errores en pivot con columnas datetime
+    if "Fecha" in _td_src.columns:
+        _td_src["Fecha"] = _td_src["Fecha"].dt.strftime("%Y-%m-%d")
 
     if not _td_rows_ord:
         st.info("Elegí al menos una dimensión para las filas.")
@@ -2882,7 +2968,6 @@ with tab11:
             )
             st.dataframe(
                 _td_pivot,
-                use_container_width=True,
                 height=min(700, max(200, len(_td_pivot) * 36 + 60)),
                 column_config=_td_col_cfg,
                 hide_index=True,
@@ -2900,104 +2985,3 @@ with tab11:
         except Exception as _td_err:
             st.error(f"No se puede armar la tabla con esa combinación: {_td_err}")
 
-# ── NOTIFICACIONES: cambios de precio semana a semana ─────────────────────
-st.markdown("<br>", unsafe_allow_html=True)
-_notif_fechas = sorted(df_full["Fecha"].unique())
-if len(_notif_fechas) >= 2:
-    _fn_ant = _notif_fechas[-2]
-    _fn_act = _notif_fechas[-1]
-    _fn_ant_str = pd.Timestamp(_fn_ant).strftime("%d/%m/%Y")
-    _fn_act_str = pd.Timestamp(_fn_act).strftime("%d/%m/%Y")
-
-    # Cambios de precio de góndola real: por producto único (Producto + Cadena), sin promediar
-    _KEY = ["Producto", "Cadena"]
-    _gond_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
-                 .rename(columns={"Precio": "p_ant"}))
-    _gond_act = (df_full[(df_full["Fecha"] == _fn_act) & (~df_full["En_oferta"])]
-                 [_KEY + ["Precio", "Marca_raw"]].drop_duplicates(subset=_KEY)
-                 .rename(columns={"Precio": "p_act"}))
-
-    _cambios = (_gond_ant.merge(_gond_act, on=_KEY + ["Marca_raw"])
-                .assign(delta=lambda d: d["p_act"] - d["p_ant"],
-                        delta_pct=lambda d: ((d["p_act"] / d["p_ant"]) - 1) * 100)
-                .query("delta != 0")
-                .sort_values("delta_pct"))
-
-    _subas = _cambios[_cambios["delta"] > 0].sort_values("delta_pct", ascending=False)
-    _bajas = _cambios[_cambios["delta"] < 0].sort_values("delta_pct")
-
-    # Ofertas nuevas: productos únicos (Producto + Cadena) sin oferta antes, con oferta ahora
-    _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
-                   [_KEY].drop_duplicates())
-    _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
-                   .drop_duplicates(subset=_KEY)
-                   [_KEY + ["Precio", "Precio_oferta", "Descuento_pct"]]
-                   .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",
-                                    "Descuento_pct": "desc"}))
-    _nuevas_of = _con_of_act.merge(_sin_of_ant, on=_KEY, how="inner")
-
-    _total    = len(_cambios)
-    _total_of = len(_nuevas_of)
-    _hay_algo = _total > 0 or _total_of > 0
-
-    _partes = []
-    if _total > 0:
-        _partes.append(f"{_total} cambio{'s' if _total != 1 else ''} de precio")
-    if _total_of > 0:
-        _partes.append(f"{_total_of} oferta{'s' if _total_of != 1 else ''} nueva{'s' if _total_of != 1 else ''}")
-    _label = ("🔔 " + " · ".join(_partes) + f" · {_fn_ant_str} → {_fn_act_str}"
-              if _hay_algo else
-              f"✅ Sin cambios de precio ni ofertas nuevas · {_fn_ant_str} → {_fn_act_str}")
-
-    def _fila(sku, cadena, flecha, pct_str, p_de, p_a, color_flecha):
-        return (
-            f"<div style='padding:5px 0;border-bottom:1px solid #E5E7EB'>"
-            f"<span style='font-size:0.82rem;color:#111827'>"
-            f"<b style='word-break:break-word'>{sku}</b><br>"
-            f"<span style='color:#6B7280'>{cadena}</span>&nbsp;&nbsp;"
-            f"<span style='color:{color_flecha}'>{flecha} {pct_str}</span>"
-            f"&nbsp;&nbsp;${p_de:,.0f} → <b>${p_a:,.0f}</b>"
-            f"</span></div>"
-        )
-
-    def _titulo_col(emoji, texto, n):
-        st.markdown(
-            f"<p style='font-size:0.95rem;font-weight:700;color:#111827;margin:0 0 4px 0'>"
-            f"{emoji} {texto} ({n})</p>"
-            f"<p style='font-size:0.75rem;color:#6B7280;margin:0 0 8px 0'>"
-            f"{_fn_ant_str} → {_fn_act_str}</p>",
-            unsafe_allow_html=True)
-
-    with st.expander(_label, expanded=_hay_algo):
-        if not _hay_algo:
-            st.info("Ningún cambio detectado entre las últimas dos semanas.")
-        else:
-            _col_s, _col_b, _col_o = st.columns(3, gap="large")
-            with _col_s:
-                _titulo_col("🔴", "Subas", len(_subas))
-                if _subas.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna suba.</span>", unsafe_allow_html=True)
-                for _, r in _subas.iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▲",
-                                      f"{r['delta_pct']:+.1f}%",
-                                      r["p_ant"], r["p_act"], "#DC2626"),
-                                unsafe_allow_html=True)
-            with _col_b:
-                _titulo_col("🟢", "Bajas", len(_bajas))
-                if _bajas.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna baja.</span>", unsafe_allow_html=True)
-                for _, r in _bajas.iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
-                                      f"{r['delta_pct']:+.1f}%",
-                                      r["p_ant"], r["p_act"], "#16A34A"),
-                                unsafe_allow_html=True)
-            with _col_o:
-                _titulo_col("🏷️", "Ofertas nuevas", len(_nuevas_of))
-                if _nuevas_of.empty:
-                    st.markdown("<span style='color:#111827;font-size:0.82rem'>Ninguna oferta nueva.</span>", unsafe_allow_html=True)
-                for _, r in _nuevas_of.sort_values("desc", ascending=False).iterrows():
-                    st.markdown(_fila(r["Producto"], r["Cadena"], "▼",
-                                      f"{r['desc']:.0f}% dto.",
-                                      r["p_gond"], r["p_of"], "#B45309"),
-                                unsafe_allow_html=True)

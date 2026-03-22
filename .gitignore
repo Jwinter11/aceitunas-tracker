@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.xlsx
+*.png
+*.jpg
+*.html
+*.exe
+*.msi
+*.txt
+!requirements.txt
+scraper*.py
+abrir_dashboard.bat
+config.txt
+debug_*.html
+laanonima_*.png
+masonline_*.png
+Antigravity.exe
+node-*.msi
+scraper_v*.py
+
+# Secretos — NUNCA commitear
+.streamlit/secrets.toml
+
+# Backups y temporales
+historial_precios.json.bak
+*.db.bak
+.claude/
+logs_scraper.txt
