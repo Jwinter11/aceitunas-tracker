@@ -2645,7 +2645,6 @@ with tab7:
                 height=320,
                 xaxis=dict(title="Semana", tickformat="%d/%m/%y", tickfont=dict(size=11, color="#111827")),
                 yaxis=dict(title="SKUs activos", tickfont=dict(size=11, color="#111827"), dtick=1),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
                 hovermode="x unified",
             )
             st.plotly_chart(fig_sku_hist)
