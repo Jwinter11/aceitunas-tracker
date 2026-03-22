@@ -250,6 +250,10 @@ html,body,[class*="css"],.stApp{font-family:'Inter',sans-serif!important}
     margin:1.2rem 0 0.4rem;padding-bottom:0.4rem;
     border-bottom:1px solid rgba(255,255,255,0.08)}
 
+/* Forzar color negro en labels de selectbox / filtros */
+.stSelectbox label, .stMultiSelect label{color:#111827!important;font-size:0.72rem!important;
+    font-weight:700!important;text-transform:uppercase!important;letter-spacing:.04em!important}
+
 .stTabs [data-baseweb="tab-list"]{background:#fff;border-radius:12px 12px 0 0;
     padding:0.4rem 0.4rem 0;gap:0.2rem;box-shadow:0 1px 6px rgba(0,0,0,0.06)}
 .stTabs [data-baseweb="tab"]{font-size:0.84rem;font-weight:600;color:#6B7280;
@@ -1774,7 +1778,7 @@ with tab5:
             _MARCAS_OF2 = {"Oliovita", "Zuelo", "La Toscana"}
             _dest_periodos = _periodos_of_sel if _periodos_of_sel else _todos_periodos_of
 
-            # Filtros locales: cadena y granularidad
+            # Filtros locales: cadena y temporalidad
             _of2_fa, _of2_fb, _of2_fc = st.columns([2, 1.2, 3])
             _cadenas_of2_disp = sorted(
                 df_full[df_full["Marca_raw"].isin(_MARCAS_OF2)]["Cadena"].unique()
@@ -1787,7 +1791,7 @@ with tab5:
                 )
             with _of2_fb:
                 _of2_gran = st.selectbox(
-                    "Granularidad", ["Semanal", "Mensual"],
+                    "Temporalidad", ["Semanal", "Mensual"],
                     key="of2_gran", label_visibility="collapsed",
                 )
             _cadenas_of2_act = _cadenas_of2_sel if _cadenas_of2_sel else _cadenas_of2_disp
@@ -1800,7 +1804,7 @@ with tab5:
             ].copy()
 
             if not _df_dest.empty:
-                # Aplicar granularidad
+                # Aplicar temporalidad
                 if _of2_gran == "Mensual":
                     _df_dest["_col_per"] = pd.to_datetime(_df_dest["Fecha"]).dt.strftime("%b %Y")
                 else:
@@ -2710,16 +2714,20 @@ with tab9:
         [0.67, "#86EFAC"], [1.00, "#86EFAC"],
     ]
 
-    # Filtros: Marca · Cadena · Granularidad
-    _qb_fa, _qb_fb, _qb_fc, _ = st.columns([2, 2, 2, 1])
+    # Filtros: Marca · Cadena · Temporalidad
+    _qlbl = '<p style="font-size:0.7rem;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px">'
+    _qb_fa, _qb_fb, _qb_fc, _ = st.columns([2, 2, 2, 3])
     with _qb_fa:
+        st.markdown(_qlbl + "🏷️ Marca</p>", unsafe_allow_html=True)
         _qb_marcas_opts = sorted(df_full["Marca_raw"].unique())
-        _qb_marca = st.selectbox("🏷️ Marca", _qb_marcas_opts, key="qb_marca")
+        _qb_marca = st.selectbox("Marca", _qb_marcas_opts, key="qb_marca", label_visibility="collapsed")
     with _qb_fb:
+        st.markdown(_qlbl + "🏪 Cadena</p>", unsafe_allow_html=True)
         _qb_cadenas_opts = ["Todas las cadenas"] + sorted(df_full[df_full["Marca_raw"] == _qb_marca]["Cadena"].unique())
-        _qb_cadena = st.selectbox("🏪 Cadena", _qb_cadenas_opts, key="qb_cadena")
+        _qb_cadena = st.selectbox("Cadena", _qb_cadenas_opts, key="qb_cadena", label_visibility="collapsed")
     with _qb_fc:
-        _qb_gran = st.selectbox("📅 Granularidad", ["Semanal", "Mensual", "Diario"], key="qb_gran")
+        st.markdown(_qlbl + "📅 Temporalidad</p>", unsafe_allow_html=True)
+        _qb_gran = st.selectbox("Temporalidad", ["Semanal", "Mensual", "Diario"], key="qb_gran", label_visibility="collapsed")
 
     # Fuente: marca + (cadena o todas)
     if _qb_cadena == "Todas las cadenas":
@@ -2733,7 +2741,7 @@ with tab9:
     if _qb_src.empty:
         st.info("Sin datos para la selección.")
     else:
-        # Columna de período según granularidad
+        # Columna de período según temporalidad
         if _qb_gran == "Diario":
             _qb_src["_pqb"] = _qb_src["Fecha"].dt.strftime("%d/%m/%Y")
             _qb_cols_ord = (
@@ -2830,7 +2838,7 @@ with tab9:
                 unsafe_allow_html=True)
 
     if not _qb_src.empty:
-        # Construir lista de períodos disponibles según granularidad
+        # Construir lista de períodos disponibles según temporalidad
         _qb_src_marca = df_full[df_full["Marca_raw"] == _qb_marca].copy()
         _qb_fechas_disp = sorted(df_full["Fecha"].unique())
 
