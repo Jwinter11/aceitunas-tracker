@@ -1579,7 +1579,6 @@ if _page_sel == "📈  Evolución":
         _skus_sel4  = st.multiselect(
             "🔍 SKU", _skus_disp4, default=[],
             placeholder="Todos los SKUs", key="sku_filter_ev4",
-            label_visibility="collapsed",
         )
         if _skus_sel4:
             dff4 = dff4[dff4["SKU_canonico"].isin(_skus_sel4)]
