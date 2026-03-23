@@ -880,6 +880,7 @@ for col,(cls,label,val,sub) in zip([c1,c2,c3,c4,c5,c6], kpis):
             <div class="kpi-sub">{sub}</div>
         </div>""", unsafe_allow_html=True)
 
+st.markdown('<div style="margin-bottom:0.5rem"></div>', unsafe_allow_html=True)
 
 # ── Función auxiliar: barra horizontal ───────────────────────────────────
 def hbar(df_x, df_y, colores, textos, titulo_x, altura=320):
@@ -913,6 +914,7 @@ def gram_filter(key, source=None):
 # TAB 1 · RESUMEN
 # ══════════════════════════════════════════════════════════════════════════
 if _page_sel == "📊  Resumen":
+    st.markdown('<div style="margin-top:1.8rem"></div>', unsafe_allow_html=True)
     # ══ Novedades ═══════════════════════════════════════════════════════════
     _pord1 = sorted(df_full["Periodo"].unique(),
                     key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
