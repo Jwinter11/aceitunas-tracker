@@ -2407,17 +2407,26 @@ if _page_sel == "🎯  Mi Marca":
             _mm_pres_piv = (_mm_heat_src.groupby(["SKU_canonico","Cadena"])["Precio"]
                             .mean().round(0).unstack("Cadena"))
             if not _mm_pres_piv.empty:
-                _mm_text_h = [[f"${v:,.0f}" if not pd.isna(v) else "—" for v in row]
-                              for row in _mm_pres_piv.values]
+                _z_vals  = _mm_pres_piv.values
+                _x_labs  = _mm_pres_piv.columns.tolist()
+                _y_labs  = _mm_pres_piv.index.tolist()
+                _z_flat  = [v for row in _z_vals for v in row if not pd.isna(v)]
+                _z_thresh = (max(_z_flat) * 0.55) if _z_flat else 0
                 fig_mm_h = go.Figure(go.Heatmap(
-                    z=_mm_pres_piv.values,
-                    x=_mm_pres_piv.columns.tolist(),
-                    y=_mm_pres_piv.index.tolist(),
+                    z=_z_vals, x=_x_labs, y=_y_labs,
                     colorscale="Blues",
-                    text=_mm_text_h, texttemplate="%{text}",
-                    textfont=dict(size=11, color="#111827"),
                     colorbar=dict(title="$", tickprefix="$", tickformat=","),
                 ))
+                # Anotaciones con color de texto condicional: blanco en celdas oscuras
+                for _ri, _ylab in enumerate(_y_labs):
+                    for _ci, _xlab in enumerate(_x_labs):
+                        _v = _z_vals[_ri][_ci]
+                        _txt = f"${_v:,.0f}" if not pd.isna(_v) else "—"
+                        _tcol = "white" if (not pd.isna(_v) and _v >= _z_thresh) else "#374151"
+                        fig_mm_h.add_annotation(
+                            x=_xlab, y=_ylab, text=_txt, showarrow=False,
+                            font=dict(size=11, color=_tcol),
+                        )
                 fig_mm_h.update_layout(
                     **BASE, height=max(280, len(_mm_pres_piv)*42+80),
                     xaxis=dict(tickfont=dict(size=12,color="#111827"), side="top"),
