@@ -1601,6 +1601,102 @@ if _page_sel == "📈  Evolución":
                           xaxis=dict(tickfont=dict(size=12,color="#111827")))
         st.plotly_chart(fig)
 
+        # ── Análisis de composición: por qué cambió el promedio ──────────────
+        if len(orden_per) >= 2:
+            _per_ant4 = orden_per[-2]
+            _per_act4 = orden_per[-1]
+            _df_ant4  = dff4[(dff4["Periodo"]==_per_ant4) & (dff4["Marca"].isin(cats_evol))]
+            _df_act4  = dff4[(dff4["Periodo"]==_per_act4) & (dff4["Marca"].isin(cats_evol))]
+
+            _insights = []
+            for _marca4 in cats_evol:
+                _ma = _df_ant4[_df_ant4["Marca"]==_marca4]
+                _mb = _df_act4[_df_act4["Marca"]==_marca4]
+                if _ma.empty or _mb.empty:
+                    continue
+                _p_ant4 = _ma[_col_precio4].mean()
+                _p_act4 = _mb[_col_precio4].mean()
+                _delta_pct = (_p_act4 - _p_ant4) / _p_ant4 * 100
+                if abs(_delta_pct) < 4:
+                    continue  # sin cambio relevante
+
+                # SKUs presentes en ambos períodos (clave = SKU_canonico + Cadena)
+                _key4 = ["SKU_canonico", "Cadena"]
+                _skus_a = set(map(tuple, _ma[_key4].drop_duplicates().values))
+                _skus_b = set(map(tuple, _mb[_key4].drop_duplicates().values))
+                _comunes = _skus_a & _skus_b
+                _salieron = _skus_a - _skus_b
+                _entraron = _skus_b - _skus_a
+
+                # Efecto precio: cambio de precio en SKUs comunes
+                _precio_comun_ant = _ma[_ma.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
+                                        ][_col_precio4].mean() if _comunes else None
+                _precio_comun_act = _mb[_mb.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
+                                        ][_col_precio4].mean() if _comunes else None
+
+                # Promedio de precios que salieron y entraron
+                _precio_salieron = (_ma[_ma.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _salieron, axis=1)][_col_precio4].mean()
+                                    if _salieron else None)
+                _precio_entraron = (_mb[_mb.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _entraron, axis=1)][_col_precio4].mean()
+                                    if _entraron else None)
+
+                # Cadenas que entraron/salieron
+                _cads_a = set(_ma["Cadena"].unique())
+                _cads_b = set(_mb["Cadena"].unique())
+                _cads_sal = _cads_a - _cads_b
+                _cads_ent = _cads_b - _cads_a
+
+                # Armar explicación
+                _arrow = "▲" if _delta_pct > 0 else "▼"
+                _color = "#DC2626" if _delta_pct > 0 else "#16A34A"
+                _partes_txt = []
+
+                if _comunes and _precio_comun_ant and _precio_comun_act:
+                    _dp = (_precio_comun_act - _precio_comun_ant) / _precio_comun_ant * 100
+                    if abs(_dp) >= 2:
+                        _partes_txt.append(f"los SKUs en común {'subieron' if _dp>0 else 'bajaron'} {abs(_dp):.1f}% en promedio")
+                    else:
+                        _partes_txt.append("los precios de los SKUs en común no cambiaron significativamente")
+
+                if _salieron:
+                    _avg_sal = _precio_salieron
+                    _vs = "por encima" if _avg_sal and _avg_sal > _p_ant4 else "por debajo"
+                    _skus_sal_names = sorted(set(s[0] for s in _salieron))[:2]
+                    _txt_sal = ", ".join(_skus_sal_names)
+                    _cad_sal_txt = f" (de {', '.join(_cads_sal)})" if _cads_sal else ""
+                    _partes_txt.append(f"dejaron de estar {len(_salieron)} SKU{'s' if len(_salieron)>1 else ''}{_cad_sal_txt} con precio {'$' + f'{_avg_sal:,.0f}' if _avg_sal else ''} ({_vs} del promedio anterior)")
+
+                if _entraron:
+                    _avg_ent = _precio_entraron
+                    _vs2 = "por encima" if _avg_ent and _avg_ent > _p_ant4 else "por debajo"
+                    _cad_ent_txt = f" (de {', '.join(_cads_ent)})" if _cads_ent else ""
+                    _partes_txt.append(f"aparecieron {len(_entraron)} SKU{'s' if len(_entraron)>1 else ''} nuevos{_cad_ent_txt} con precio {'$' + f'{_avg_ent:,.0f}' if _avg_ent else ''} ({_vs2} del promedio)")
+
+                _explicacion = "; ".join(_partes_txt) + "." if _partes_txt else "cambio por variación en el mix de productos."
+                _insights.append((_marca4, _delta_pct, _arrow, _color,
+                                   _p_ant4, _p_act4, _explicacion))
+
+            if _insights:
+                st.markdown('<div class="chart-note" style="margin-top:0.5rem">🔍 Análisis de cambios entre períodos</div>',
+                            unsafe_allow_html=True)
+                for _mi, (_mn, _dp, _arr, _clr, _pa, _pb, _exp) in enumerate(_insights):
+                    _mc = COLORES_CAT.get(_mn, "#6B7280")
+                    st.markdown(f"""
+                    <div style="display:flex;align-items:flex-start;gap:0.9rem;
+                                background:#FAFAFA;border-radius:10px;
+                                padding:0.7rem 1rem;margin-bottom:0.5rem;
+                                border-left:4px solid {_mc}">
+                      <div style="min-width:90px;font-weight:700;color:{_mc};font-size:0.85rem">{_mn}</div>
+                      <div style="min-width:110px;font-size:0.85rem">
+                        <span style="color:#6B7280">${_pa:,.0f}</span>
+                        <span style="margin:0 4px;color:#9CA3AF">→</span>
+                        <span style="font-weight:700;color:{_clr}">${_pb:,.0f}</span>
+                        <span style="margin-left:6px;font-weight:700;color:{_clr}">{_arr}{abs(_dp):.1f}%</span>
+                      </div>
+                      <div style="font-size:0.78rem;color:#374151;flex:1">{_exp}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 5 · OFERTAS
 # ══════════════════════════════════════════════════════════════════════════
