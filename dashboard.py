@@ -1574,15 +1574,11 @@ if _page_sel == "📈  Evolución":
     _fc4a, _fc4b, _ = st.columns([2, 2, 3])
     with _fc4a:
         dff4, _ = gram_filter("gram_tab4")
-    with _fc4b:
-        _usar_real4 = st.checkbox("Mostrar en pesos reales (ajustado por inflación)",
-                                   key="toggle_real_ev4", value=False)
-
     orden_per = sorted(df_full["Periodo"].unique(),
                        key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
 
-    _col_precio4 = "Precio_real" if _usar_real4 else "Precio"
-    _lbl_precio4 = "Precio real promedio ($, base semana actual)" if _usar_real4 else "Precio promedio góndola ($)"
+    _col_precio4 = "Precio"
+    _lbl_precio4 = "Precio promedio góndola ($)"
 
     with st.expander("Evolución precio de góndola promedio por marca", expanded=True):
         cats_evol = [c for c in orden_cats if c not in ("Otras","Marca Propia")]
