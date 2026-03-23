@@ -923,26 +923,24 @@ if _page_sel == "📊  Resumen":
     _ult1  = _pord1[-1] if _pord1 else None
     _pen1  = _pord1[-2] if len(_pord1) >= 2 else None
 
-    # Cambios de precio vs período anterior (mismo Cadena + SKU canónico, ≥3%)
-    # Se excluyen productos En_oferta en el período actual (son descuentos, no cambios reales)
+    # Cambios de precio BASE vs período anterior (igual lógica que tab Evolución):
+    # - Solo compara productos SIN oferta en AMBOS períodos
+    # - Bajas >15% se descartan (son casi siempre descuentos no detectados por scraper)
     _cambios1: list[dict] = []
     if _ult1 and _pen1:
-        _en_oferta_ult = set(
-            map(tuple, dff[(dff["Periodo"]==_ult1) & (dff["En_oferta"]==True)]
-                .groupby(["Cadena","SKU_canonico"]).groups.keys())
-        )
-        _avg_u = (dff[dff["Periodo"]==_ult1]
-                      .groupby(["Cadena","SKU_canonico"])["Precio"].mean())
-        _avg_p = (dff[dff["Periodo"]==_pen1]
-                      .groupby(["Cadena","SKU_canonico"])["Precio"].mean())
+        _sin_of_u = dff[(dff["Periodo"]==_ult1) & (~dff["En_oferta"])]
+        _sin_of_p = dff[(dff["Periodo"]==_pen1) & (~dff["En_oferta"])]
+        _avg_u = _sin_of_u.groupby(["Cadena","SKU_canonico"])["Precio"].mean()
+        _avg_p = _sin_of_p.groupby(["Cadena","SKU_canonico"])["Precio"].mean()
         for _k in _avg_u.index.intersection(_avg_p.index):
-            if _k in _en_oferta_ult:
-                continue  # es descuento activo, no cambio de precio
             _pn, _pv = float(_avg_u[_k]), float(_avg_p[_k])
             _cp = (_pn - _pv) / _pv * 100
-            if abs(_cp) >= 3:
-                _cambios1.append({"cadena":_k[0],"sku":_k[1],
-                                   "viejo":_pv,"nuevo":_pn,"pct":_cp})
+            if abs(_cp) < 3:
+                continue
+            if _cp < -15:
+                continue  # baja >15% = probable descuento no detectado, se omite
+            _cambios1.append({"cadena":_k[0],"sku":_k[1],
+                               "viejo":_pv,"nuevo":_pn,"pct":_cp})
         _cambios1.sort(key=lambda x: abs(x["pct"]), reverse=True)
 
     # Ofertas de la semana (último período, todos los filtros activos salvo marca)
