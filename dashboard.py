@@ -1571,9 +1571,19 @@ if _page_sel == "📈  Evolución":
         st.info("📅 **Solo hay una semana cargada.** "
                 "Ejecutá `python scraper.py` la semana que viene para ver la evolución.")
 
-    _fc4a, _fc4b, _ = st.columns([2, 2, 3])
+    _fc4a, _fc4b, _fc4c = st.columns([2, 3, 2])
     with _fc4a:
         dff4, _ = gram_filter("gram_tab4")
+    with _fc4b:
+        _skus_disp4 = sorted(dff4["SKU_canonico"].dropna().unique().tolist())
+        _skus_sel4  = st.multiselect(
+            "🔍 SKU", _skus_disp4, default=[],
+            placeholder="Todos los SKUs", key="sku_filter_ev4",
+            label_visibility="collapsed",
+        )
+        if _skus_sel4:
+            dff4 = dff4[dff4["SKU_canonico"].isin(_skus_sel4)]
+
     orden_per = sorted(df_full["Periodo"].unique(),
                        key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
 
