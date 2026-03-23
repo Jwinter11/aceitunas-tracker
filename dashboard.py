@@ -186,7 +186,7 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
     --white:#FFFFFF;--off-white:#F8FAFC;
     --gray-50:#F9FAFB;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
     --gray-400:#94A3B8;--gray-600:#475569;--gray-900:#0F172A;
-    --sidebar-w:230px
+    --sidebar-w:185px
 }
 
 .stApp{
@@ -198,16 +198,23 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
 .block-container{padding:1.5rem 2rem 3rem;max-width:1500px}
 #MainMenu,footer,header{visibility:hidden}
 
-/* ── Sidebar ── */
+/* ── Sidebar siempre visible y angosta ── */
 [data-testid="stSidebar"]{
     background:#FFFFFF!important;
     border-right:1px solid var(--gray-200)!important;
     box-shadow:4px 0 24px rgba(0,0,0,0.06)!important;
-    min-width:var(--sidebar-w)!important;max-width:var(--sidebar-w)!important
+    min-width:var(--sidebar-w)!important;max-width:var(--sidebar-w)!important;
+    transform:translateX(0)!important;
+    transition:none!important
 }
+/* Ocultar todos los botones de colapsar/expandir */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"]{display:none!important;visibility:hidden!important}
+[data-testid="stSidebarCollapsedControl"],
+button[kind="header"]{display:none!important;visibility:hidden!important}
+/* Forzar que el área principal no se expanda cuando sidebar "colapsa" */
+section[data-testid="stSidebarContent"]{display:block!important;visibility:visible!important}
+[data-testid="stAppViewContainer"]{margin-left:var(--sidebar-w)!important}
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] p{color:var(--gray-600)!important}
@@ -372,7 +379,7 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
 @media(max-width:768px){
     .block-container{padding:0.6rem 0.8rem 2rem!important}
     .main-header{padding:1rem!important;flex-direction:column!important;gap:0.5rem!important}
-    :root{--sidebar-w:200px}
+    :root{--sidebar-w:160px}
     .stTabs [data-baseweb="tab-list"]{overflow-x:auto!important;flex-wrap:nowrap!important;
         -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important}
     .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
