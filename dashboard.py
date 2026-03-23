@@ -845,7 +845,7 @@ st.markdown(f"""
     <h1>Aceite de Oliva · Tracker</h1>
     <p>{fecha_max_str} &nbsp;·&nbsp; {len(df_ult):,} productos
        &nbsp;·&nbsp; {df_ult['Cadena'].nunique()} cadenas
-       &nbsp;·&nbsp; {n_sem} semana{{"s" if n_sem>1 else ""}} acumulada{{"s" if n_sem>1 else ""}}</p>
+       &nbsp;·&nbsp; {n_sem} semana{"s" if n_sem>1 else ""} acumulada{"s" if n_sem>1 else ""}</p>
   </div>
   <div class="header-right">
     <div class="header-badge">🫙 Aceite de Oliva</div>
