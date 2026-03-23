@@ -1604,7 +1604,8 @@ if _page_sel == "📈  Evolución":
                           yaxis=dict(tickprefix="$", tickformat=",",
                                      tickfont=dict(size=12,color="#111827")),
                           xaxis=dict(tickfont=dict(size=12,color="#111827")),
-                          legend=dict(title=dict(text="Marca", font=dict(color="#111827"))))
+                          legend_title_text="Marca",
+                          legend_title_font_color="#111827")
         st.plotly_chart(fig)
 
     with st.expander("Evolución precio de góndola promedio por SKU", expanded=True):
@@ -1625,8 +1626,9 @@ if _page_sel == "📈  Evolución":
                               yaxis=dict(tickprefix="$", tickformat=",",
                                          tickfont=dict(size=12, color="#111827")),
                               xaxis=dict(tickfont=dict(size=12, color="#111827")),
-                              legend=dict(title=dict(text="SKU", font=dict(color="#111827")),
-                                          font=dict(size=11)))
+                              legend_title_text="SKU",
+                              legend_title_font_color="#111827",
+                              legend_font_size=11)
         st.plotly_chart(fig_sku)
 
         # ── Análisis de composición: por qué cambió el promedio ──────────────
