@@ -924,13 +924,20 @@ if _page_sel == "📊  Resumen":
     _pen1  = _pord1[-2] if len(_pord1) >= 2 else None
 
     # Cambios de precio vs período anterior (mismo Cadena + SKU canónico, ≥3%)
+    # Se excluyen productos En_oferta en el período actual (son descuentos, no cambios reales)
     _cambios1: list[dict] = []
     if _ult1 and _pen1:
+        _en_oferta_ult = set(
+            map(tuple, dff[(dff["Periodo"]==_ult1) & (dff["En_oferta"]==True)]
+                .groupby(["Cadena","SKU_canonico"]).groups.keys())
+        )
         _avg_u = (dff[dff["Periodo"]==_ult1]
                       .groupby(["Cadena","SKU_canonico"])["Precio"].mean())
         _avg_p = (dff[dff["Periodo"]==_pen1]
                       .groupby(["Cadena","SKU_canonico"])["Precio"].mean())
         for _k in _avg_u.index.intersection(_avg_p.index):
+            if _k in _en_oferta_ult:
+                continue  # es descuento activo, no cambio de precio
             _pn, _pv = float(_avg_u[_k]), float(_avg_p[_k])
             _cp = (_pn - _pv) / _pv * 100
             if abs(_cp) >= 3:

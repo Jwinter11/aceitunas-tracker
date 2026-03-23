@@ -418,7 +418,7 @@ _JS_EXTRAER_CENCOSUD = """() => {
                 }
                 const isBadge = /saving|discount|badge|promo|ofert|percent|sticker|label|tag/i.test(clsCtx);
                 if (isBadge) {
-                    const mPct = text.match(/^-?(\d{1,2})\s*%(\s*off)?$/i);
+                    const mPct = text.match(/^-?\s*(\d{1,2})\s*%/i);
                     if (mPct) {
                         const pct = parseInt(mPct[1]);
                         if (pct >= 5 && pct <= 80) discountPct = pct;
@@ -434,8 +434,17 @@ _JS_EXTRAER_CENCOSUD = """() => {
             if (parentText.toLowerCase().includes('lt.') || parentText.toLowerCase().includes('litro')) continue;
             if (parentText.toLowerCase().includes('impuesto')) continue;
 
+            // Detectar precio tachado: por CSS text-decoration O por nombre de clase
             const deco = window.getComputedStyle(el).textDecorationLine || '';
-            if (deco.includes('line-through')) {
+            let elClass = '';
+            let node2 = el;
+            for (let i = 0; i < 4 && node2; i++) {
+                elClass += ' ' + (node2.getAttribute('class') || '');
+                node2 = node2.parentElement;
+            }
+            const isStrike = deco.includes('line-through') ||
+                /listPrice|list-price|priceWithout|without.?discount|sellingPrice.*strike|tachado|precio.?sin|regularPrice|compareAt/i.test(elClass);
+            if (isStrike) {
                 originalPrice = text;   // precio tachado = precio sin descuento
             } else {
                 if (!currentPrice) currentPrice = text;   // primer precio sin tachado = precio a pagar
