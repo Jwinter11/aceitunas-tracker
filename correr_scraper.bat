@@ -8,8 +8,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM ── 2. Pushear precios.db a GitHub (actualiza dashboard online) ───────────
-git add precios.db historial_precios.json >> logs_scraper.txt 2>&1
+REM ── 2. Escribir timestamp para forzar redeploy en Streamlit Cloud ─────────
+echo %date% %time% > last_update.txt
+
+REM ── 3. Pushear precios.db a GitHub (actualiza dashboard online) ───────────
+git add precios.db historial_precios.json last_update.txt >> logs_scraper.txt 2>&1
 git commit -m "Scrape automatico %date%" >> logs_scraper.txt 2>&1
 git push origin main >> logs_scraper.txt 2>&1
 if errorlevel 1 (
