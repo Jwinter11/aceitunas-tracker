@@ -295,6 +295,8 @@ section[data-testid="stSidebarContent"]{display:block!important;visibility:visib
 .kpi-card.red:hover{box-shadow:0 20px 48px rgba(239,68,68,0.2),0 0 32px rgba(239,68,68,0.15)}
 .kpi-card.teal{border-top-color:#0D9488}
 .kpi-card.yellow{border-top-color:#EAB308}
+.kpi-card.blue{border-top-color:#3B82F6}
+.kpi-card.blue:hover{box-shadow:0 20px 48px rgba(59,130,246,0.2),0 0 32px rgba(59,130,246,0.15)}
 .kpi-label{font-size:0.59rem;font-weight:700;text-transform:uppercase;
     letter-spacing:1.5px;color:var(--gray-400);margin-bottom:0.5rem}
 .kpi-value{font-size:1.8rem;font-weight:900;color:var(--gray-900);
@@ -864,7 +866,7 @@ ahorro_prom  = (df_of["Precio"] - df_of["Precio_oferta"]).mean() if not df_of.em
 
 c1,c2,c3,c4,c5,c6 = st.columns(6)
 kpis = [
-    ("",       "Productos relevados",    f"{dff['SKU_canonico'].nunique():,}", f"{dff['Cadena'].nunique()} cadenas"),
+    ("blue",   "Productos relevados",    f"{dff['SKU_canonico'].nunique():,}", f"{dff['Cadena'].nunique()} cadenas"),
     ("green",  "Precio prom. góndola",f"${precio_prom:,.0f}",     "precio sin descuento"),
     ("orange", "Precio/litro prom.",  f"${pl_prom:,.0f}" if pl_prom else "—", "promedio por litro"),
     ("purple", "Cadena más barata",   cadena_barata,               "menor precio/litro"),
