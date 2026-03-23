@@ -375,7 +375,13 @@ section[data-testid="stSidebarContent"]{display:block!important;visibility:visib
 @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-15px) scale(1.05)}}
 @keyframes shimmerLine{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes rippleAnim{to{transform:scale(4);opacity:0}}
-@keyframes navPressed{0%,100%{transform:translateX(4px)}50%{transform:translateX(6px)}}
+@keyframes navPressed{
+    0%  {transform:translateX(0) scale(1)}
+    20% {transform:translateX(8px) scale(0.96)}
+    50% {transform:translateX(3px) scale(0.98)}
+    75% {transform:translateX(5px) scale(1.01)}
+    100%{transform:translateX(4px) scale(1)}
+}
 
 /* ── Mobile ── */
 @media(max-width:768px){
@@ -393,7 +399,7 @@ section[data-testid="stSidebarContent"]{display:block!important;visibility:visib
     .stTabs [data-baseweb="tab"]{font-size:0.65rem!important;padding:0.35rem 0.5rem!important}
 }
 
-/* -- Sidebar radio navigation -- */
+/* ── NAV RADIO AS SIDE MENU ── */
 [data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"]{
     padding:0.38rem 0.65rem!important;border-radius:8px!important;
     align-items:center!important;cursor:pointer!important;margin:1px 0!important;
@@ -408,12 +414,15 @@ section[data-testid="stSidebarContent"]{display:block!important;visibility:visib
     background:linear-gradient(135deg,#DCFCE7,#BBF7D0)!important;
     border-left:4px solid var(--green)!important;
     box-shadow:0 0 20px rgba(22,163,74,0.3),0 4px 12px rgba(22,163,74,0.2)!important;
-    transform:translateX(4px)!important
+    transform:translateX(4px)!important;margin-left:-1px!important;
+    animation:navPressed 0.35s cubic-bezier(.36,.07,.19,.97) both!important
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] p{
     color:var(--green)!important;font-weight:800!important;
     text-shadow:0 0 12px rgba(22,163,74,0.4)!important;font-size:0.88rem!important
 }
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"] > div:first-child{display:none!important}
+[data-testid="stSidebar"] [data-testid="stRadio"] p{font-size:0.82rem!important;font-weight:500!important;color:#374151!important;margin:0!important;transition:color 0.2s!important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -728,44 +737,64 @@ with st.sidebar:
         key="nav_radio",
         label_visibility="collapsed",
     )
+    active_page = _page_sel.split("  ", 1)[1].strip() if "  " in _page_sel else _page_sel.strip()
+
+    st.markdown('<div class="sidebar-sep">Período semanal</div>', unsafe_allow_html=True)
+    periodos_disp = sorted(
+        df_full["Periodo"].unique(),
+        key=lambda p: df_full[df_full["Periodo"] == p]["Fecha"].min(),
+    )
+    if len(periodos_disp) > 1:
+        periodos_sel = st.multiselect("Período", periodos_disp, default=periodos_disp,
+                                      label_visibility="collapsed")
+    else:
+        periodos_sel = periodos_disp
+        st.info(f"📅 {periodos_disp[0]}")
 
     st.markdown("---")
     if st.button("🔄  Actualizar datos", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-    st.markdown("---")
-    st.markdown("""
-    <style>
-    a.csb{display:flex;align-items:center;gap:10px;
-      background:linear-gradient(135deg,#064E3B,#065F46);
-      border:1px solid rgba(74,222,128,0.25);border-radius:14px;
-      padding:0.75rem 1rem;text-decoration:none;color:#fff;
-      font-size:0.78rem;font-weight:700;letter-spacing:0.3px;
-      transition:all 0.3s ease;box-shadow:0 4px 15px rgba(6,78,59,0.35);
-      position:relative;overflow:hidden;width:100%;box-sizing:border-box}
-    a.csb::before{content:"";position:absolute;top:-50%;left:-60%;
-      width:60%;height:200%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
-      transform:skewX(-20deg);transition:left 0.5s ease}
-    a.csb:hover::before{left:120%}
-    a.csb:hover{background:linear-gradient(135deg,#065F46,#047857);
-      box-shadow:0 6px 22px rgba(6,78,59,0.5),0 0 0 1px rgba(74,222,128,0.35);
-      transform:translateY(-2px)}
-    .csb-icon{font-size:1.4rem;flex-shrink:0}
-    .csb-txt{display:flex;flex-direction:column;gap:1px}
-    .csb-lbl{font-size:0.6rem;font-weight:600;opacity:0.75;text-transform:uppercase;letter-spacing:1px}
-    .csb-nm{font-size:0.82rem;font-weight:800;letter-spacing:-0.2px}
-    </style>
-    <a href="https://aceitunasarg.streamlit.app" target="_blank" class="csb">
-      <div class="csb-icon">🫒</div>
-      <div class="csb-txt">
-        <span class="csb-lbl">Ir a</span>
-        <span class="csb-nm">Aceitunas Tracker</span>
-      </div>
-      <span style="margin-left:auto">↗</span>
-    </a>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-sep">Otras categorías</div>', unsafe_allow_html=True)
+    _comp_ui.html("""
+<style>
+  body{margin:0;padding:0;background:transparent;font-family:'Montserrat',sans-serif}
+  a.csb{
+    display:flex;align-items:center;gap:10px;
+    background:linear-gradient(135deg,#064E3B,#065F46);
+    border:1px solid rgba(74,222,128,0.25);border-radius:14px;
+    padding:0.75rem 1rem;text-decoration:none;color:#fff;
+    font-size:0.78rem;font-weight:700;letter-spacing:0.3px;
+    transition:all 0.3s ease;box-shadow:0 4px 15px rgba(6,78,59,0.35);
+    position:relative;overflow:hidden;width:100%;box-sizing:border-box
+  }
+  a.csb::before{
+    content:"";position:absolute;top:-50%;left:-60%;width:60%;height:200%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+    transform:skewX(-20deg);transition:left 0.5s ease
+  }
+  a.csb:hover::before{left:120%}
+  a.csb:hover{
+    background:linear-gradient(135deg,#065F46,#047857);
+    box-shadow:0 6px 22px rgba(6,78,59,0.5),0 0 0 1px rgba(74,222,128,0.35);
+    transform:translateY(-2px)
+  }
+  a.csb:active{transform:translateY(0)}
+  .icon{font-size:1.4rem;flex-shrink:0}
+  .txt{display:flex;flex-direction:column;gap:1px}
+  .lbl{font-size:0.6rem;font-weight:600;opacity:0.75;text-transform:uppercase;letter-spacing:1px}
+  .nm{font-size:0.82rem;font-weight:800;letter-spacing:-0.2px}
+  .arr{margin-left:auto;opacity:0.6;font-size:0.8rem}
+</style>
+<a href="https://aceitunasarg.streamlit.app" target="_blank" class="csb">
+  <div class="icon">🫒</div>
+  <div class="txt">
+    <span class="lbl">Ir a</span>
+    <span class="nm">Aceitunas Tracker</span>
+  </div>
+  <span class="arr">↗</span>
+</a>""", height=72, scrolling=False)
 
 # ── Valores por defecto: siempre todos ───────────────────────────────────
 cadenas_sel       = sorted(df_full["Cadena"].unique())
@@ -774,9 +803,6 @@ cats_sel          = cats_disp
 buckets_con_datos = [e for e in GRAMAJE_BUCKETS if df_full["Gramaje"].eq(e).any()]
 gram_sel          = buckets_con_datos
 inflacion_mensual = 6.0
-periodos_disp = sorted(df_full["Periodo"].unique(),
-                       key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
-periodos_sel  = periodos_disp  # usar todos los períodos
 
 # ── Deflactor de inflación (fijo 6%) ─────────────────────────────────────
 _semanas_ord = sorted(df_full["Fecha"].unique())
