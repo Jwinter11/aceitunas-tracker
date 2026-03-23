@@ -383,6 +383,28 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
     .block-container{padding:0.4rem 0.4rem 2rem!important}
     .stTabs [data-baseweb="tab"]{font-size:0.65rem!important;padding:0.35rem 0.5rem!important}
 }
+
+/* -- Sidebar radio navigation -- */
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"]{
+    padding:0.38rem 0.65rem!important;border-radius:8px!important;
+    align-items:center!important;cursor:pointer!important;margin:1px 0!important;
+    border-left:3px solid transparent!important;transition:all 0.2s ease!important
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"]:hover{
+    background:rgba(22,163,74,0.07)!important;
+    border-left:3px solid rgba(22,163,74,0.4)!important;
+    transform:translateX(2px)!important
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"]{
+    background:linear-gradient(135deg,#DCFCE7,#BBF7D0)!important;
+    border-left:4px solid var(--green)!important;
+    box-shadow:0 0 20px rgba(22,163,74,0.3),0 4px 12px rgba(22,163,74,0.2)!important;
+    transform:translateX(4px)!important
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] p{
+    color:var(--green)!important;font-weight:800!important;
+    text-shadow:0 0 12px rgba(22,163,74,0.4)!important;font-size:0.88rem!important
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -681,80 +703,27 @@ BASE = {**_BASE_CORE, "margin": dict(l=10, r=10, t=40, b=10)}
 orden_cats = ["La Toscana","Zuelo","Oliovita","Natura","Nucete","Cocinero","Lira",
               "Marca Propia","Otras"]
 
-# ── SIDEBAR ───────────────────────────────────────────────────────────────
+# ── SIDEBAR ─────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-logo">🫒 <span class="accent">Aceite</span> Tracker</div>
     <div class="sidebar-sub">Monitor de precios · Argentina</div>
     """, unsafe_allow_html=True)
 
-    periodos_disp = sorted(df_full["Periodo"].unique(),
-                           key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
-    st.markdown('<div class="sidebar-sep">Período semanal</div>', unsafe_allow_html=True)
-    if len(periodos_disp) > 1:
-        periodos_sel = st.multiselect("Período", periodos_disp, default=periodos_disp,
-                                      label_visibility="collapsed")
-    else:
-        periodos_sel = periodos_disp
-        st.info(f"📅 {periodos_disp[0]}")
+    st.markdown('<div class="sidebar-sep">Navegación</div>', unsafe_allow_html=True)
+    _page_sel = st.radio(
+        "Navegación",
+        ["📊  Resumen", "🏪  Por Cadena", "🏷️  Por Marca",
+         "📈  Evolución", "🔖  Ofertas", "⚖️  Comparativa",
+         "🎯  Mi Marca", "📦  Quiebres", "🔢  Tabla dinámica"],
+        key="nav_radio",
+        label_visibility="collapsed",
+    )
 
     st.markdown("---")
     if st.button("🔄  Actualizar datos", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-
-    st.markdown('<div class="sidebar-sep">📤 Exportar</div>', unsafe_allow_html=True)
-    _export_excel_btn = st.button("⬇️ Exportar Excel ejecutivo", use_container_width=True, key="btn_excel")
-    _export_csv_btn   = st.button("⬇️ Exportar CSV completo",    use_container_width=True, key="btn_csv")
-
-    # ── Categorías personalizadas ──────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div class="sidebar-sep">🗂️ Categorías</div>', unsafe_allow_html=True)
-    if "custom_categorias" not in st.session_state:
-        st.session_state["custom_categorias"] = []
-    _cat_nueva = st.text_input(
-        "Nueva categoría", placeholder="ej: Premium, Orgánico…",
-        key="cat_nueva_input", label_visibility="collapsed",
-    )
-    _cat_col1, _cat_col2 = st.columns([3, 1])
-    with _cat_col2:
-        if st.button("＋", key="btn_add_cat", use_container_width=True):
-            _v = _cat_nueva.strip()
-            if _v and _v not in st.session_state["custom_categorias"]:
-                st.session_state["custom_categorias"].append(_v)
-    if st.session_state["custom_categorias"]:
-        for _ci, _cn in enumerate(list(st.session_state["custom_categorias"])):
-            _cc1, _cc2 = st.columns([4, 1])
-            with _cc1:
-                st.markdown(
-                    f'<div style="font-size:0.78rem;color:#D1D5DB;padding:4px 0">{_cn}</div>',
-                    unsafe_allow_html=True,
-                )
-            with _cc2:
-                if st.button("✕", key=f"del_cat_{_ci}", use_container_width=True):
-                    st.session_state["custom_categorias"].pop(_ci)
-                    st.rerun()
-    else:
-        st.markdown(
-            '<div style="font-size:0.75rem;color:#6B7280;padding:4px 0">Sin categorías creadas</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ── Productos favoritos ────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div class="sidebar-sep">⭐ Favoritos</div>', unsafe_allow_html=True)
-    if "favoritos" not in st.session_state:
-        st.session_state["favoritos"] = []
-    _fav_opts = sorted(df_full["SKU_canonico"].unique().tolist())
-    _fav_sel = st.multiselect(
-        "Productos favoritos",
-        _fav_opts,
-        default=[f for f in st.session_state["favoritos"] if f in _fav_opts],
-        key="fav_multiselect",
-        label_visibility="collapsed",
-        placeholder="Buscar SKU…",
-    )
-    st.session_state["favoritos"] = _fav_sel
 
     st.markdown("---")
     st.markdown("""
@@ -796,6 +765,9 @@ cats_sel          = cats_disp
 buckets_con_datos = [e for e in GRAMAJE_BUCKETS if df_full["Gramaje"].eq(e).any()]
 gram_sel          = buckets_con_datos
 inflacion_mensual = 6.0
+periodos_disp = sorted(df_full["Periodo"].unique(),
+                       key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
+periodos_sel  = periodos_disp  # usar todos los períodos
 
 # ── Deflactor de inflación (fijo 6%) ─────────────────────────────────────
 _semanas_ord = sorted(df_full["Fecha"].unique())
@@ -828,143 +800,21 @@ if dff.empty:
     st.warning("Sin datos con los filtros seleccionados.")
     st.stop()
 
-# ── Exportación ejecutiva ──────────────────────────────────────────────────
-_ultima_sem_lbl = df_full["Semana_num"].max() if not df_full.empty else "XX"
-_df_ult_export  = df_full[df_full["Fecha"] == df_full["Fecha"].max()].copy()
-
-if _export_csv_btn:
-    _csv_data = (dff[["Periodo","Cadena","Marca","Marca_raw","Producto","SKU_canonico",
-                        "Gramaje","Precio","Precio_litro","Precio_oferta","Descuento_pct","En_oferta"]]
-                 .copy())
-    _csv_data.columns = ["Semana","Cadena","Marca","Marca_raw","Producto","SKU_canonico",
-                          "Gramaje","Precio góndola ($)","Precio/Litro ($)",
-                          "Precio oferta ($)","Descuento %","En oferta"]
-    with st.sidebar:
-        st.download_button("📥 Descargar CSV",
-                           _csv_data.to_csv(index=False).encode("utf-8-sig"),
-                           f"aceite_tracker_sem{_ultima_sem_lbl}.csv",
-                           "text/csv", use_container_width=True, key="dl_csv")
-
-if _export_excel_btn:
-    try:
-        import io, openpyxl  # noqa
-        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-        _buf = io.BytesIO()
-
-        # Hoja 1 — Resumen por marca
-        _tbl_exp1 = (dff.groupby("Marca_raw").agg(
-            precio_medio=("Precio","mean"), precio_min=("Precio","min"),
-            precio_max=("Precio","max"),
-            pl_medio=("Precio_litro","mean"),
-            pct_oferta=("En_oferta", lambda s: s.mean()*100),
-            desc_medio=("Descuento_pct","mean"),
-        ).reset_index())
-        _tbl_exp1.columns = ["Marca","Precio medio ($)","Mínimo ($)","Máximo ($)",
-                              "$/L promedio","% en oferta","Dto. prom. (%)"]
-
-        # Hoja 2 — Heatmap marca × cadena
-        _tbl_exp2 = (dff.groupby(["Marca_raw","Cadena"])["Precio"]
-                     .mean().round(0).unstack("Cadena").reset_index())
-        _tbl_exp2.columns.name = None
-
-        # Hoja 3 — Ofertas activas
-        _tbl_exp3 = (_df_ult_export[_df_ult_export["En_oferta"]]
-                     [["Cadena","Marca_raw","SKU_canonico","Gramaje","Precio","Precio_oferta","Descuento_pct"]]
-                     .copy())
-        _tbl_exp3.columns = ["Cadena","Marca","SKU","Gramaje","Precio góndola ($)","Precio oferta ($)","Dto. %"]
-
-        # Hoja 4 — Movimientos
-        _f_primera = df_full["Fecha"].min()
-        _f_ultima  = df_full["Fecha"].max()
-        _skus_pri  = set(zip(df_full[df_full["Fecha"]==_f_primera]["SKU_canonico"],
-                              df_full[df_full["Fecha"]==_f_primera]["Cadena"]))
-        _skus_ult  = set(zip(df_full[df_full["Fecha"]==_f_ultima]["SKU_canonico"],
-                              df_full[df_full["Fecha"]==_f_ultima]["Cadena"]))
-        _entradas  = [{"SKU":s,"Cadena":c,"Estado":"Entrada"} for s,c in _skus_ult - _skus_pri]
-        _salidas   = [{"SKU":s,"Cadena":c,"Estado":"Salida"}  for s,c in _skus_pri - _skus_ult]
-        _tbl_exp4  = pd.DataFrame(_entradas + _salidas) if (_entradas or _salidas) else pd.DataFrame(columns=["SKU","Cadena","Estado"])
-
-        with pd.ExcelWriter(_buf, engine="openpyxl") as _xw:
-            _tbl_exp1.to_excel(_xw, sheet_name="Resumen",          index=False)
-            _tbl_exp2.to_excel(_xw, sheet_name="Por Cadena",        index=False)
-            _tbl_exp3.to_excel(_xw, sheet_name="Ofertas activas",   index=False)
-            _tbl_exp4.to_excel(_xw, sheet_name="Movimientos",       index=False)
-
-        with st.sidebar:
-            st.download_button("📥 Descargar Excel",
-                               _buf.getvalue(),
-                               f"aceite_tracker_semana_{_ultima_sem_lbl}.xlsx",
-                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                               use_container_width=True, key="dl_excel")
-    except ImportError:
-        st.sidebar.warning("Instalá openpyxl: `pip install openpyxl`")
-
-# ── Header ────────────────────────────────────────────────────────────────
-_hdr_col, _hdr_btn = st.columns([6, 1])
-with _hdr_col:
-    st.markdown(f"""
+# ── Header ──────────────────────────────────────────────────────────────────────────
+st.markdown(f"""
 <div class="main-header">
   <div class="header-left">
     <div class="header-eyebrow">🫒 Monitor de Precios</div>
     <h1>Aceite de Oliva · Tracker</h1>
     <p>{fecha_max_str} &nbsp;·&nbsp; {len(df_ult):,} productos
        &nbsp;·&nbsp; {df_ult['Cadena'].nunique()} cadenas
-       &nbsp;·&nbsp; {n_sem} semana{"s" if n_sem>1 else ""} acumulada{"s" if n_sem>1 else ""}</p>
+       &nbsp;·&nbsp; {n_sem} semana{{"s" if n_sem>1 else ""}} acumulada{{"s" if n_sem>1 else ""}}</p>
   </div>
   <div class="header-right">
     <div class="header-badge">🫙 Aceite de Oliva</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
-with _hdr_btn:
-    if st.button("🔄 Actualizar", key="refresh_header", help="Recargar datos"):
-        st.cache_data.clear()
-        st.rerun()
-    if st.button("🫒 Aceitunas", key="goto_aceitunas",
-                 help="Ir al tracker de aceitunas (puerto 8502)"):
-        import webbrowser as _wb
-        _wb.open("http://localhost:8502")
-
-# ── Notificaciones de favoritos ───────────────────────────────────────────
-_favs = st.session_state.get("favoritos", [])
-if _favs:
-    _fechas_ord = sorted(df_full["Fecha"].unique())
-    if len(_fechas_ord) >= 2:
-        _f_rec  = _fechas_ord[-1]
-        _f_prev = _fechas_ord[-2]
-        _fav_notifs = []
-        for _fsku in _favs:
-            _fdf = df_full[df_full["SKU_canonico"] == _fsku]
-            _prec_rec  = _fdf[_fdf["Fecha"] == _f_rec]["Precio"].mean()
-            _prec_prev = _fdf[_fdf["Fecha"] == _f_prev]["Precio"].mean()
-            if pd.notna(_prec_rec) and pd.notna(_prec_prev) and _prec_prev > 0:
-                _pct = (_prec_rec - _prec_prev) / _prec_prev * 100
-                if abs(_pct) >= 1:
-                    _arrow = "🔴 ▲" if _pct > 0 else "🟢 ▼"
-                    _fav_notifs.append(
-                        f"{_arrow} <b>{_fsku}</b> &nbsp;{_pct:+.1f}% "
-                        f"&nbsp;<span style='color:#9CA3AF'>"
-                        f"${_prec_prev:,.0f} → ${_prec_rec:,.0f}</span>"
-                    )
-            elif pd.notna(_prec_rec) and pd.isna(_prec_prev):
-                _fav_notifs.append(f"🆕 <b>{_fsku}</b> &nbsp;reapareció en góndola")
-            elif pd.isna(_prec_rec) and pd.notna(_prec_prev):
-                _fav_notifs.append(f"⚠️ <b>{_fsku}</b> &nbsp;ya no aparece (posible quiebre)")
-        if _fav_notifs:
-            _notif_html = "".join(
-                f'<div style="padding:4px 0;font-size:0.82rem;color:#E5E7EB;'
-                f'border-bottom:1px solid rgba(255,255,255,0.07)">{n}</div>'
-                for n in _fav_notifs
-            )
-            st.markdown(f"""
-            <div style="background:rgba(15,52,96,0.55);border:1px solid rgba(99,179,237,0.25);
-                        border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.8rem">
-              <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;
-                          letter-spacing:0.8px;color:#93C5FD;margin-bottom:6px">
-                ⭐ Cambios en favoritos
-              </div>
-              {_notif_html}
-            </div>""", unsafe_allow_html=True)
 
 # ── KPIs ──────────────────────────────────────────────────────────────────
 precio_prom   = dff["Precio"].mean()
@@ -995,19 +845,6 @@ for col,(cls,label,val,sub) in zip([c1,c2,c3,c4,c5,c6], kpis):
             <div class="kpi-sub">{sub}</div>
         </div>""", unsafe_allow_html=True)
 
-# ── TABS ──────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab9, tab10, tab11 = st.tabs([
-    "📊  Resumen",
-    "🏪  Por Cadena",
-    "🏷️  Por Marca",
-    "📈  Evolución",
-    "🔖  Ofertas",
-    "⚖️  Comparativa",
-    "🎯  Mi Marca",
-    "📦  Quiebres",
-    "📋  Base",
-    "🔢  Tabla dinámica",
-])
 
 # ── Función auxiliar: barra horizontal ───────────────────────────────────
 def hbar(df_x, df_y, colores, textos, titulo_x, altura=320):
@@ -1040,7 +877,7 @@ def gram_filter(key, source=None):
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 1 · RESUMEN
 # ══════════════════════════════════════════════════════════════════════════
-with tab1:
+if _page_sel == "📊  Resumen":
     # ══ Novedades ═══════════════════════════════════════════════════════════
     _pord1 = sorted(df_full["Periodo"].unique(),
                     key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
@@ -1507,7 +1344,7 @@ with tab1:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 2 · POR CADENA
 # ══════════════════════════════════════════════════════════════════════════
-with tab2:
+if _page_sel == "🏪  Por Cadena":
     _fc2a, _fc2b, _ = st.columns([2, 2, 3])
     with _fc2a:
         dff2, _ = gram_filter("gram_tab2")
@@ -1608,7 +1445,7 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 3 · POR MARCA
 # ══════════════════════════════════════════════════════════════════════════
-with tab3:
+if _page_sel == "🏷️  Por Marca":
     # Filtros en la misma fila para que ambos gráficos arranquen al mismo nivel
     _fc3a, _fc3b, _ = st.columns([2, 2, 3])
     with _fc3a:
@@ -1685,7 +1522,7 @@ with tab3:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 4 · EVOLUCIÓN
 # ══════════════════════════════════════════════════════════════════════════
-with tab4:
+if _page_sel == "📈  Evolución":
     if n_sem < 2:
         st.info("📅 **Solo hay una semana cargada.** "
                 "Ejecutá `python scraper.py` la semana que viene para ver la evolución.")
@@ -1723,7 +1560,7 @@ with tab4:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 5 · OFERTAS
 # ══════════════════════════════════════════════════════════════════════════
-with tab5:
+if _page_sel == "🔖  Ofertas":
     # ── Filtro de período propio para Ofertas ──────────────────────────────
     _todos_periodos_of = sorted(df_full["Periodo"].unique(),
                                 key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
@@ -2011,52 +1848,9 @@ with tab5:
                 st.info("No hay SKUs de Oliovita o Zuelo con los filtros seleccionados.")
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 10 · BASE (tabla completa)
-# ══════════════════════════════════════════════════════════════════════════
-with tab10:
-    col_b, col_s = st.columns([3, 1])
-    with col_b:
-        busqueda = st.text_input("🔍 Buscar producto, marca o cadena",
-                                  placeholder="ej: Nucete, Lira, Jumbo, 500 ml…",
-                                  label_visibility="collapsed")
-    with col_s:
-        orden_col = st.selectbox("Ordenar por",
-                                  ["Precio ($)","Precio/Litro ($)","Cadena","Marca"],
-                                  label_visibility="collapsed")
-
-    df_tabla = dff.copy()
-    if busqueda:
-        m = (df_tabla["Producto"].str.contains(busqueda, case=False, na=False) |
-             df_tabla["Marca"].str.contains(busqueda, case=False, na=False)    |
-             df_tabla["Cadena"].str.contains(busqueda, case=False, na=False))
-        df_tabla = df_tabla[m]
-
-    col_ord = {"Precio ($)":"Precio","Precio/Litro ($)":"Precio_litro",
-               "Cadena":"Cadena","Marca":"Marca"}
-    df_tabla = df_tabla.sort_values(col_ord[orden_col], na_position="last")
-
-    df_show = df_tabla[["Periodo","Cadena","Marca","Producto",
-                          "Gramaje","Precio","Precio_litro","En_oferta"]].copy()
-    df_show.columns = ["Semana","Cadena","Marca","Producto",
-                        "Gramaje","Precio góndola ($)","Precio/Litro ($)","En oferta"]
-
-    st.markdown(f"**{len(df_show):,} productos** · precios de góndola")
-    st.dataframe(df_show, height=530,
-        column_config={
-            "Precio góndola ($)":st.column_config.NumberColumn(format="$%d"),
-            "Precio/Litro ($)":  st.column_config.NumberColumn(format="$%d"),
-            "En oferta":         st.column_config.CheckboxColumn(),
-        },
-        hide_index=True,
-    )
-    csv = df_show.to_csv(index=False).encode("utf-8-sig")
-    st.download_button("⬇️  Exportar CSV", csv, "aceite_gondola.csv",
-                        "text/csv", use_container_width=False)
-
-# ══════════════════════════════════════════════════════════════════════════
 # TAB 3 (continuación) · DETALLE POR MARCA
 # ══════════════════════════════════════════════════════════════════════════
-with tab3:
+if _page_sel == "🏷️  Por Marca":
     with st.expander("🔍 Detalle de marca", expanded=True):
         st.markdown("<hr style='border:none;border-top:2px solid #E5E7EB;margin:1.5rem 0 1rem'>",
                     unsafe_allow_html=True)
@@ -2228,7 +2022,7 @@ with tab3:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 6 · COMPARATIVA DE SKUs
 # ══════════════════════════════════════════════════════════════════════════
-with tab6:
+if _page_sel == "⚖️  Comparativa":
     st.markdown('<div class="chart-note">Seleccioná dos marcas y luego un SKU de cada una para comparar su precio de góndola en el tiempo</div>',
                 unsafe_allow_html=True)
 
@@ -2428,7 +2222,7 @@ with tab6:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 7 · MI MARCA
 # ══════════════════════════════════════════════════════════════════════════
-with tab7:
+if _page_sel == "🎯  Mi Marca":
     # ── Selectores de marca y SKU ────────────────────────────────────────
     _marcas_mm_opts = sorted(
         list(MARCAS_DESTACADAS) +
@@ -2833,7 +2627,7 @@ with tab7:
 
 # TAB 9 · QUIEBRES DE STOCK
 # ══════════════════════════════════════════════════════════════════════════
-with tab9:
+if _page_sel == "📦  Quiebres":
     st.markdown(
         '<div class="chart-note">Un <b>quiebre</b> ocurre cuando un producto estaba disponible '
         'en un período y dejó de aparecer el siguiente. '
@@ -3057,7 +2851,7 @@ with tab9:
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 11 · TABLA DINÁMICA
 # ══════════════════════════════════════════════════════════════════════════
-with tab11:
+if _page_sel == "🔢  Tabla dinámica":
     _TD_DIMS = {
         "Cadena":       "Cadena",
         "Marca":        "Marca",
