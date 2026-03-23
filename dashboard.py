@@ -1603,8 +1603,31 @@ if _page_sel == "📈  Evolución":
         fig.update_layout(**BASE,
                           yaxis=dict(tickprefix="$", tickformat=",",
                                      tickfont=dict(size=12,color="#111827")),
-                          xaxis=dict(tickfont=dict(size=12,color="#111827")))
+                          xaxis=dict(tickfont=dict(size=12,color="#111827")),
+                          legend=dict(title=dict(text="Marca", font=dict(color="#111827"))))
         st.plotly_chart(fig)
+
+    with st.expander("Evolución precio de góndola promedio por SKU", expanded=True):
+        _skus_evol = dff4["SKU_canonico"].dropna().unique().tolist()
+        if _skus_sel4:
+            _skus_evol = [s for s in _skus_evol if s in _skus_sel4]
+        df_ev_sku = (dff4[dff4["SKU_canonico"].isin(_skus_evol)]
+                        .groupby(["Periodo","SKU_canonico"])[_col_precio4].mean()
+                        .reset_index().rename(columns={_col_precio4:"_p"}))
+        df_ev_sku["Periodo"] = pd.Categorical(df_ev_sku["Periodo"], categories=orden_per, ordered=True)
+        _n_skus = df_ev_sku["SKU_canonico"].nunique()
+        fig_sku = px.line(df_ev_sku, x="Periodo", y="_p", color="SKU_canonico",
+                          markers=True,
+                          labels={"_p": _lbl_precio4, "Periodo": "", "SKU_canonico": "SKU"},
+                          height=max(460, _n_skus * 22 + 200))
+        fig_sku.update_traces(line=dict(width=2), marker=dict(size=7))
+        fig_sku.update_layout(**BASE,
+                              yaxis=dict(tickprefix="$", tickformat=",",
+                                         tickfont=dict(size=12, color="#111827")),
+                              xaxis=dict(tickfont=dict(size=12, color="#111827")),
+                              legend=dict(title=dict(text="SKU", font=dict(color="#111827")),
+                                          font=dict(size=11)))
+        st.plotly_chart(fig_sku)
 
         # ── Análisis de composición: por qué cambió el promedio ──────────────
         if len(orden_per) >= 2:
