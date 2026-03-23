@@ -787,7 +787,7 @@ with st.sidebar:
   .nm{font-size:0.82rem;font-weight:800;letter-spacing:-0.2px}
   .arr{margin-left:auto;opacity:0.6;font-size:0.8rem}
 </style>
-<a href="https://aceitunasarg.streamlit.app" target="_blank" class="csb">
+<a href="https://aceitunaspricing-argentina.streamlit.app" target="_blank" class="csb">
   <div class="icon">🫒</div>
   <div class="txt">
     <span class="lbl">Ir a</span>
