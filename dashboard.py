@@ -720,6 +720,25 @@ _BASE_CORE = dict(
 )
 BASE = {**_BASE_CORE, "margin": dict(l=10, r=10, t=40, b=10)}
 
+def _pchart(fig, use_container_width=True, **kw):
+    """Renderiza un gráfico Plotly forzando precios sin decimales en hover y ejes."""
+    for tr in fig.data:
+        t = getattr(tr, "type", "")
+        if t in ("scatter", "scattergl") and not getattr(tr, "hovertemplate", None):
+            tr.hovertemplate = "<b>%{fullData.name}</b><br>%{x}<br><b>$%{y:,.0f}</b><extra></extra>"
+        elif t == "bar":
+            orient = getattr(tr, "orientation", "v")
+            if orient == "h" and not getattr(tr, "hovertemplate", None):
+                tr.hovertemplate = "<b>%{y}</b><br><b>$%{x:,.0f}</b><extra></extra>"
+            elif not getattr(tr, "hovertemplate", None):
+                tr.hovertemplate = "<b>%{x}</b><br><b>$%{y:,.0f}</b><extra></extra>"
+        elif t == "heatmap":
+            if not getattr(tr, "hovertemplate", None):
+                tr.hovertemplate = "%{y} · %{x}<br><b>$%{z:,.0f}</b><extra></extra>"
+    fig.update_yaxes(tickformat=",.0f")
+    fig.update_xaxes(tickformat=None)   # x puede ser texto/fecha, no tocar
+    st.plotly_chart(fig, use_container_width=use_container_width, **kw)
+
 orden_cats = ["La Toscana","Zuelo","Oliovita","Natura","Nucete","Cocinero","Lira",
               "Marca Propia","Otras"]
 
@@ -1411,7 +1430,7 @@ if _page_sel == "🏪  Por Cadena":
                 textos=[f"${v:,.0f}" for v in df_c["Precio"]],
                 titulo_x="Precio promedio ($)",
             )
-            st.plotly_chart(fig)
+            _pchart(fig)
 
         with col_r:
             df_pie = dff2.groupby("Cadena").size().reset_index(name="n")
@@ -1425,7 +1444,7 @@ if _page_sel == "🏪  Por Cadena":
             fig.update_layout(**_BASE_CORE, height=320,
                               margin=dict(l=10,r=10,t=40,b=40),
                               showlegend=False)
-            st.plotly_chart(fig)
+            _pchart(fig)
 
     # Box distribución por cadena — IQR estándar, escala enfocada
     with st.expander("Distribución de precios de góndola por cadena", expanded=True):
@@ -1451,7 +1470,7 @@ if _page_sel == "🏪  Por Cadena":
                                      range=[max(0, _p10 * 0.7), _p90 * 1.25]),
                           xaxis=dict(tickfont=dict(size=13,color="#111827")),
                           showlegend=False)
-        st.plotly_chart(fig)
+        _pchart(fig)
 
     with st.expander("Precio de góndola promedio — Cadena × Marca", expanded=True):
         pivot = (dff2.groupby(["Marca","Cadena"])["Precio"]
@@ -1470,7 +1489,7 @@ if _page_sel == "🏪  Por Cadena":
             fig.update_layout(**BASE, height=max(320, len(pivot)*48+80),
                               xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
                               yaxis=dict(tickfont=dict(size=13,color="#111827")))
-            st.plotly_chart(fig)
+            _pchart(fig)
 
     with st.expander("Precio de góndola mínimo por cadena y marca", expanded=True):
         df_min = dff2.groupby(["Marca","Cadena"])["Precio"].min().reset_index()
@@ -1484,7 +1503,7 @@ if _page_sel == "🏪  Por Cadena":
                           yaxis=dict(tickprefix="$", tickformat=",",
                                      tickfont=dict(size=12,color="#111827")),
                           xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
-        st.plotly_chart(fig)
+        _pchart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 3 · POR MARCA
@@ -1515,7 +1534,7 @@ if _page_sel == "🏷️  Por Marca":
                 titulo_x="Precio promedio ($)",
                 altura=420,
             )
-            st.plotly_chart(fig)
+            _pchart(fig)
 
         with col_r:
             df_cnt = (src_pie3.groupby("Marca").size()
@@ -1530,7 +1549,7 @@ if _page_sel == "🏷️  Por Marca":
             fig.update_layout(**_BASE_CORE, height=420,
                               margin=dict(l=10,r=10,t=40,b=40),
                               showlegend=False)
-            st.plotly_chart(fig)
+            _pchart(fig)
 
     # Heatmap presencia: marca × cadena (SKUs canónicos únicos)
     # Usamos df_full filtrado solo por cadena y marca (sin periodo ni gramaje)
@@ -1560,7 +1579,7 @@ if _page_sel == "🏷️  Por Marca":
             fig.update_layout(**BASE, height=max(280, len(pres_pivot)*44+80),
                               xaxis=dict(tickfont=dict(size=13,color="#111827"), side="top"),
                               yaxis=dict(tickfont=dict(size=13,color="#111827")))
-            st.plotly_chart(fig)
+            _pchart(fig)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1606,7 +1625,7 @@ if _page_sel == "📈  Evolución":
                           xaxis=dict(tickfont=dict(size=12,color="#111827")),
                           legend_title_text="Marca",
                           legend_title_font_color="#111827")
-        st.plotly_chart(fig)
+        _pchart(fig)
 
     with st.expander("Evolución precio de góndola promedio por SKU", expanded=True):
         # Filtros propios de este gráfico
@@ -1644,7 +1663,7 @@ if _page_sel == "📈  Evolución":
                                   legend_title_text="SKU",
                                   legend_title_font_color="#111827",
                                   legend_font_size=11)
-            st.plotly_chart(fig_sku)
+            _pchart(fig_sku)
 
         # ── Análisis de composición: por qué cambió el promedio ──────────────
         if len(orden_per) >= 2:
@@ -1829,7 +1848,7 @@ if _page_sel == "🔖  Ofertas":
                                              range=[0, vmax_d * 1.4]),
                                   yaxis=dict(tickfont=dict(size=13,color="#111827")),
                                   showlegend=False)
-                st.plotly_chart(fig)
+                _pchart(fig)
 
             with col_r:
                 df_of_cnt = _src_kpi.groupby("Cadena").size().reset_index(name="n")
@@ -1843,7 +1862,7 @@ if _page_sel == "🔖  Ofertas":
                 fig.update_layout(**_BASE_CORE, height=320,
                                   margin=dict(l=10,r=10,t=40,b=40),
                                   showlegend=False)
-                st.plotly_chart(fig)
+                _pchart(fig)
 
         # Góndola vs oferta por marca
         with st.expander("Precio góndola vs precio oferta por marca", expanded=True):
@@ -1875,7 +1894,7 @@ if _page_sel == "🔖  Ofertas":
                                          tickfont=dict(size=12,color="#111827"),
                                          range=[0, ymax * 1.25]),
                               xaxis=dict(tickfont=dict(size=13,color="#111827"), tickangle=-20))
-            st.plotly_chart(fig)
+            _pchart(fig)
 
         # Ofertas en el tiempo por marca y por cadena
         _n_per_of5 = df_of5["Periodo"].nunique()
@@ -1894,7 +1913,7 @@ if _page_sel == "🔖  Ofertas":
                     fig.update_layout(**BASE,
                                       xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
                                       yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                    st.plotly_chart(fig)
+                    _pchart(fig)
 
                 with col_or:
                     df_of_t_c = (df_of5.groupby(["Periodo","Cadena"]).size().reset_index(name="n"))
@@ -1907,7 +1926,7 @@ if _page_sel == "🔖  Ofertas":
                     fig.update_layout(**BASE,
                                       xaxis=dict(tickfont=dict(size=12,color="#111827"), tickangle=-20),
                                       yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                    st.plotly_chart(fig)
+                    _pchart(fig)
 
         # Top 20 mejores descuentos
         with st.expander("Top 20 · Mejores descuentos del período", expanded=True):
@@ -2028,7 +2047,7 @@ if _page_sel == "🔖  Ofertas":
                 )
                 _oh_col, _ = st.columns([1, 2])
                 with _oh_col:
-                    st.plotly_chart(fig_oh)
+                    _pchart(fig_oh)
             else:
                 st.info("No hay SKUs de Oliovita o Zuelo con los filtros seleccionados.")
 
@@ -2110,7 +2129,7 @@ if _page_sel == "🏷️  Por Marca":
                                              tickformat=",", range=[0, vmax7*1.4]),
                                   yaxis=dict(tickfont=dict(size=11, color="#111827")),
                                   showlegend=False)
-                st.plotly_chart(fig)
+                _pchart(fig)
 
             with col_b_7:
                 # Precio por cadena (box) — usa el filtro de SKU si está activo
@@ -2126,7 +2145,7 @@ if _page_sel == "🏷️  Por Marca":
                                              tickfont=dict(size=12,color="#111827")),
                                   xaxis=dict(tickfont=dict(size=12,color="#111827")),
                                   showlegend=False)
-                st.plotly_chart(fig)
+                _pchart(fig)
 
             # ── Mapa semanal de precios por SKU seleccionado ─────────────────────
             if sku_sel7 != "Todos los SKUs":
@@ -2164,7 +2183,7 @@ if _page_sel == "🏷️  Por Marca":
                                       xaxis=dict(tickfont=dict(size=12,color="#111827"),
                                                  side="bottom", tickangle=-20),
                                       yaxis=dict(tickfont=dict(size=12,color="#111827")))
-                    st.plotly_chart(fig)
+                    _pchart(fig)
 
             # Tabla detallada
             st.markdown('<div class="chart-title">Detalle completo de registros</div>',
@@ -2202,7 +2221,7 @@ if _page_sel == "🏷️  Por Marca":
                                   yaxis=dict(tickprefix="$", tickformat=",",
                                              tickfont=dict(size=12,color="#111827")),
                                   xaxis=dict(tickfont=dict(size=12,color="#111827")))
-                st.plotly_chart(fig)
+                _pchart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 6 · COMPARATIVA DE SKUs
@@ -2294,7 +2313,7 @@ if _page_sel == "⚖️  Comparativa":
                           yaxis=dict(tickprefix="$", tickformat=",",
                                      tickfont=dict(size=12,color="#111827")),
                           xaxis=dict(tickfont=dict(size=12,color="#111827")))
-        st.plotly_chart(fig)
+        _pchart(fig)
 
         # Mini tabla: ¿hubo oferta ese período?
         if orden_per8:
@@ -2348,7 +2367,7 @@ if _page_sel == "⚖️  Comparativa":
                                tickangle=-25),
                     yaxis=dict(tickfont=dict(size=12, color="#111827")),
                 )
-                st.plotly_chart(_fig_cp)
+                _pchart(_fig_cp)
 
             _col_cp1, _col_cp2 = st.columns(2, gap="large")
             with _col_cp1:
@@ -2402,7 +2421,7 @@ if _page_sel == "⚖️  Comparativa":
                                                    line=dict(color="#9CA3AF",width=1.5,dash="dot"))],
                                       title=dict(text=f"{lbl1[:30]} vs {lbl2[:30]}",
                                                  font=dict(size=12,color="#6B7280"), x=0.01))
-                    st.plotly_chart(fig)
+                    _pchart(fig)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 7 · MI MARCA
@@ -2535,7 +2554,7 @@ if _page_sel == "🎯  Mi Marca":
                         yaxis=dict(tickfont=dict(size=11, color="#111827")),
                         showlegend=False,
                     )
-                    st.plotly_chart(fig_mm_bar)
+                    _pchart(fig_mm_bar)
 
         # ── B) Presencia por cadena — heatmap SKU × cadena ───────────────
         with st.expander("🏪 Presencia por cadena", expanded=True):
@@ -2571,7 +2590,7 @@ if _page_sel == "🎯  Mi Marca":
                     xaxis=dict(tickfont=dict(size=12,color="#111827"), side="top"),
                     yaxis=dict(tickfont=dict(size=11,color="#111827")),
                 )
-                st.plotly_chart(fig_mm_h)
+                _pchart(fig_mm_h)
 
             # KPIs chicos: presencia en cadenas por SKU
             _mm_cad_x_sku = (_mm_heat_src.groupby("SKU_canonico")["Cadena"]
@@ -2648,7 +2667,7 @@ if _page_sel == "🎯  Mi Marca":
                                      yaxis=dict(tickprefix="$",tickformat=",",
                                                 tickfont=dict(size=12,color="#111827")),
                                      xaxis=dict(tickfont=dict(size=12,color="#111827")))
-        st.plotly_chart(fig_mm_ev)
+        _pchart(fig_mm_ev)
 
         # ── D) Comportamiento de ofertas ─────────────────────────────────
         st.markdown("<br>", unsafe_allow_html=True)
@@ -2815,7 +2834,7 @@ if _page_sel == "🎯  Mi Marca":
                 xaxis=dict(tickfont=dict(size=12, color="#111827"), side="top"),
                 yaxis=dict(tickfont=dict(size=11, color="#111827")),
             )
-            st.plotly_chart(fig_mm_pres)
+            _pchart(fig_mm_pres)
         else:
             st.info("Sin datos de presencia para esta marca.")
 
@@ -2926,7 +2945,7 @@ if _page_sel == "📦  Quiebres":
                            side="bottom", tickangle=-20),
                 yaxis=dict(tickfont=dict(size=11, color="#111827")),
             )
-            st.plotly_chart(fig)
+            _pchart(fig)
 
             # Tabla resumen por SKU
             _qb_n_breaks = (_qb_status == -1).sum(axis=1)
@@ -3040,7 +3059,7 @@ if _page_sel == "📦  Quiebres":
             xaxis=dict(tickfont=dict(size=12, color="#111827"), side="top"),
             yaxis=dict(tickfont=dict(size=11, color="#111827")),
         )
-        st.plotly_chart(fig_pres)
+        _pchart(fig_pres)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 11 · TABLA DINÁMICA
