@@ -198,23 +198,25 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
 .block-container{padding:1.5rem 2rem 3rem;max-width:1500px}
 #MainMenu,footer,header{visibility:hidden}
 
-/* ── Sidebar siempre visible y angosta ── */
+/* ── Sidebar: pegada a la izquierda, siempre visible ── */
 [data-testid="stSidebar"]{
     background:#FFFFFF!important;
     border-right:1px solid var(--gray-200)!important;
     box-shadow:4px 0 24px rgba(0,0,0,0.06)!important;
     min-width:var(--sidebar-w)!important;max-width:var(--sidebar-w)!important;
-    transform:translateX(0)!important;
-    transition:none!important
+    position:fixed!important;left:0!important;top:0!important;
+    height:100vh!important;z-index:999!important;
+    transform:none!important;transition:none!important
 }
 /* Ocultar todos los botones de colapsar/expandir */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
 button[kind="header"]{display:none!important;visibility:hidden!important}
-/* Forzar que el área principal no se expanda cuando sidebar "colapsa" */
 section[data-testid="stSidebarContent"]{display:block!important;visibility:visible!important}
-[data-testid="stAppViewContainer"]{margin-left:var(--sidebar-w)!important}
+/* Contenido principal: respetar el ancho del sidebar */
+[data-testid="stAppViewContainer"]{padding-left:var(--sidebar-w)!important}
+.block-container{padding-left:1.5rem!important;padding-right:2rem!important;max-width:100%!important}
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] p{color:var(--gray-600)!important}
