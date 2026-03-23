@@ -186,7 +186,7 @@ html,body,[class*="css"],.stApp{font-family:'Montserrat',sans-serif!important}
     --white:#FFFFFF;--off-white:#F8FAFC;
     --gray-50:#F9FAFB;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
     --gray-400:#94A3B8;--gray-600:#475569;--gray-900:#0F172A;
-    --sidebar-w:185px
+    --sidebar-w:230px
 }
 
 .stApp{
@@ -379,7 +379,7 @@ section[data-testid="stSidebarContent"]{display:block!important;visibility:visib
 @media(max-width:768px){
     .block-container{padding:0.6rem 0.8rem 2rem!important}
     .main-header{padding:1rem!important;flex-direction:column!important;gap:0.5rem!important}
-    :root{--sidebar-w:160px}
+    :root{--sidebar-w:200px}
     .stTabs [data-baseweb="tab-list"]{overflow-x:auto!important;flex-wrap:nowrap!important;
         -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important}
     .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
