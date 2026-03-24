@@ -978,240 +978,6 @@ def gram_filter(key, source=None):
 # ══════════════════════════════════════════════════════════════════════════
 if _page_sel == "📊  Resumen":
     st.markdown('<div style="margin-top:1.8rem"></div>', unsafe_allow_html=True)
-    # ══ Novedades ═══════════════════════════════════════════════════════════
-    _pord1 = sorted(df_full["Periodo"].unique(),
-                    key=lambda p: df_full[df_full["Periodo"]==p]["Fecha"].min())
-    _ult1  = _pord1[-1] if _pord1 else None
-    _pen1  = _pord1[-2] if len(_pord1) >= 2 else None
-
-    # Cambios de precio BASE vs período anterior (igual lógica que tab Evolución):
-    # - Solo compara productos SIN oferta en AMBOS períodos
-    # - Bajas >15% se descartan (son casi siempre descuentos no detectados por scraper)
-    _cambios1: list[dict] = []
-    if _ult1 and _pen1:
-        _sin_of_u = dff[(dff["Periodo"]==_ult1) & (~dff["En_oferta"])]
-        _sin_of_p = dff[(dff["Periodo"]==_pen1) & (~dff["En_oferta"])]
-        _avg_u = _sin_of_u.groupby(["Cadena","SKU_canonico"])["Precio"].mean()
-        _avg_p = _sin_of_p.groupby(["Cadena","SKU_canonico"])["Precio"].mean()
-        for _k in _avg_u.index.intersection(_avg_p.index):
-            _pn, _pv = float(_avg_u[_k]), float(_avg_p[_k])
-            _cp = (_pn - _pv) / _pv * 100
-            if abs(_cp) < 3:
-                continue
-            if _cp < -8:
-                continue  # baja >8% = probable descuento no detectado por scraper, se omite
-            _cambios1.append({"cadena":_k[0],"sku":_k[1],
-                               "viejo":_pv,"nuevo":_pn,"pct":_cp})
-        _cambios1.sort(key=lambda x: abs(x["pct"]), reverse=True)
-
-    # Ofertas de la semana (último período, todos los filtros activos salvo marca)
-    _of_now_df = pd.DataFrame()
-    if _ult1:
-        _of_now_df = df_full[
-            (df_full["Fecha"]==df_full["Fecha"].max()) &
-            df_full["En_oferta"] &
-            df_full["Cadena"].isin(cadenas_sel) &
-            (df_full["Gramaje"].isna() | df_full["Gramaje"].isin(gram_sel))
-        ].copy()
-
-    # Top 5 ofertas por descuento
-    _top_of1: list[dict] = []
-    _dest_of1: list[dict] = []  # ofertas de Zuelo / Oliovita / La Toscana
-    if not _of_now_df.empty:
-        _of_agg1 = (_of_now_df
-                    .groupby(["Cadena","SKU_canonico","Marca_raw"])
-                    .agg(desc=("Descuento_pct","max"),
-                         pof=("Precio_oferta","min"),
-                         pg =("Precio","mean"),
-                         url=("Producto_url","first"))
-                    .reset_index()
-                    .sort_values("desc", ascending=False)
-                    .reset_index(drop=True))
-        _top_of1  = _of_agg1.head(3).to_dict("records")
-        _dest_of1 = (_of_agg1[_of_agg1["Marca_raw"].isin({"Zuelo","Oliovita","La Toscana"})]
-                     .to_dict("records"))
-
-    if _cambios1 or _top_of1 or _dest_of1:
-        with st.expander("🔔 Novedades", expanded=True):
-            _cn_l, _cn_r, _cn_dest = st.columns([2, 2, 2], gap="large")
-
-            # ── Columna izquierda: cambios de precio ──────────────────────────
-            with _cn_l:
-                st.markdown('<div class="chart-note">📊 Cambios de precio vs semana anterior</div>',
-                            unsafe_allow_html=True)
-                if not _cambios1:
-                    st.markdown(
-                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
-                        'Sin cambios significativos de precio esta semana.</div>',
-                        unsafe_allow_html=True)
-                else:
-                    for _c1 in _cambios1[:8]:
-                        _arr1 = "▲" if _c1["pct"] > 0 else "▼"
-                        _clr1 = "#EF4444" if _c1["pct"] > 0 else "#16A34A"
-                        st.markdown(f"""
-                        <div style="display:flex;align-items:center;gap:0.8rem;
-                                    background:#FAFAFA;border-radius:9px;
-                                    padding:0.55rem 0.85rem;margin-bottom:0.4rem;
-                                    border-left:4px solid {_clr1}">
-                          <div style="flex:1;min-width:0">
-                            <div style="font-size:0.77rem;font-weight:700;color:#111827;
-                                        word-break:break-word">{_c1['sku']}</div>
-                            <div style="font-size:0.69rem;color:#6B7280">{_c1['cadena']}</div>
-                          </div>
-                          <div style="text-align:right;white-space:nowrap;flex-shrink:0">
-                            <span style="font-size:0.88rem;font-weight:800;
-                                         color:{_clr1}">{_arr1} {abs(_c1['pct']):.1f}%</span><br>
-                            <span style="font-size:0.68rem;color:#9CA3AF">
-                              ${_c1['viejo']:,.0f} → ${_c1['nuevo']:,.0f}
-                            </span>
-                          </div>
-                        </div>""", unsafe_allow_html=True)
-
-            # ── Columna derecha: top ofertas ───────────────────────────────────
-            with _cn_r:
-                st.markdown('<div class="chart-note">🏷️ Top ofertas activas esta semana</div>',
-                            unsafe_allow_html=True)
-                if not _top_of1:
-                    st.markdown(
-                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
-                        'Sin ofertas activas esta semana.</div>',
-                        unsafe_allow_html=True)
-                else:
-                    _fecha_max = df_full["Fecha"].max()
-                    _MEDALS = ["🥇","🥈","🥉"]
-                    for _i1, _o1 in enumerate(_top_of1):
-                        _is_dest1 = _o1["Marca_raw"] in ("Zuelo","Oliovita")
-                        _bdg1 = ("⭐" if _is_dest1 and _i1 >= 3
-                                 else _MEDALS[_i1] if _i1 < 3 else "⭐")
-                        _clr_border1 = (COLORES_CAT.get(_o1["Marca_raw"],"#3B82F6")
-                                        if _is_dest1 else "#3B82F6")
-                        # Calcular desde cuándo está activa la oferta
-                        _of_hist = df_full[
-                            (df_full["SKU_canonico"] == _o1["SKU_canonico"]) &
-                            (df_full["Cadena"] == _o1["Cadena"]) &
-                            df_full["En_oferta"]
-                        ]["Fecha"].drop_duplicates().sort_values()
-                        # Encontrar la racha continua que llega hasta fecha_max
-                        _all_dates = sorted(df_full["Fecha"].unique())
-                        _of_dates  = sorted(_of_hist.tolist())
-                        _run_start = _fecha_max
-                        for _d in reversed(_all_dates):
-                            if _d in _of_dates:
-                                _run_start = _d
-                            elif _d < _fecha_max:
-                                break
-                        if _run_start == _fecha_max:
-                            _dur_str = f"Activa desde {_fecha_max.strftime('%d/%m')}"
-                        else:
-                            _dur_str = f"Del {_run_start.strftime('%d/%m')} al {_fecha_max.strftime('%d/%m')}"
-
-                        _o1_url_raw = _o1.get("url")
-                        _o1_url = (_o1_url_raw if (isinstance(_o1_url_raw, str)
-                                   and _o1_url_raw.startswith("http")) else "")
-                        _o1_link_open  = f'<a href="{_o1_url}" target="_blank" style="text-decoration:none;display:block">' if _o1_url else ""
-                        _o1_link_close = "</a>" if _o1_url else ""
-                        _ver_link = (f'&nbsp;<a href="{_o1_url}" target="_blank" '
-                                     f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
-                                     if _o1_url else "")
-                        st.markdown(f"""
-                        {_o1_link_open}<div style="background:#FFFFFF;border-radius:8px;
-                                    padding:0.55rem 0.75rem;margin-bottom:0.4rem;
-                                    border-left:3px solid {_clr_border1};
-                                    box-shadow:0 1px 4px rgba(0,0,0,0.07)">
-                          <div style="font-size:0.75rem;font-weight:700;color:#111827;
-                                      margin-bottom:0.35rem;line-height:1.25">
-                            {_bdg1} {_o1['SKU_canonico'][:55]}
-                          </div>
-                          <div style="display:flex;gap:1.2rem;align-items:flex-end">
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Precio oferta</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_o1['pof']:,.0f}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Góndola</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_o1['pg']:,.0f}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Dto.</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#DC2626">-{_o1['desc']:.0f}%</div>
-                            </div>
-                          </div>
-                          <div style="font-size:0.65rem;color:#374151;margin-top:0.3rem">
-                            🏪 {_o1['Cadena']} &nbsp;·&nbsp; 🗓️ {_dur_str}{_ver_link}
-                          </div>
-                        </div>{_o1_link_close}""", unsafe_allow_html=True)
-
-            # ── Columna derecha: ofertas Zuelo / Oliovita / La Toscana ────────
-            with _cn_dest:
-                st.markdown('<div class="chart-note">⭐ Zuelo · Oliovita · La Toscana</div>',
-                            unsafe_allow_html=True)
-                if not _dest_of1:
-                    st.markdown(
-                        '<div style="color:#9CA3AF;font-size:0.8rem;padding:0.3rem 0 0.8rem">'
-                        'Sin ofertas activas para estas marcas.</div>',
-                        unsafe_allow_html=True)
-                else:
-                    _COLORES_DEST = {"Zuelo":"#0F3460","Oliovita":"#16A34A","La Toscana":"#B45309"}
-                    for _od in _dest_of1:
-                        _clr_d = _COLORES_DEST.get(_od["Marca_raw"], "#3B82F6")
-                        # Duración de la oferta (misma lógica que columna izquierda)
-                        _od_hist = df_full[
-                            (df_full["SKU_canonico"] == _od["SKU_canonico"]) &
-                            (df_full["Cadena"] == _od["Cadena"]) &
-                            df_full["En_oferta"]
-                        ]["Fecha"].drop_duplicates().sort_values()
-                        _od_dates = sorted(_od_hist.tolist())
-                        _od_run_start = _fecha_max
-                        for _d in reversed(_all_dates):
-                            if _d in _od_dates:
-                                _od_run_start = _d
-                            elif _d < _fecha_max:
-                                break
-                        if _od_run_start == _fecha_max:
-                            _od_dur = f"Activa desde {_fecha_max.strftime('%d/%m')}"
-                        else:
-                            _od_dur = f"Del {_od_run_start.strftime('%d/%m')} al {_fecha_max.strftime('%d/%m')}"
-                        _od_url_raw = _od.get("url")
-                        _od_url = (_od_url_raw if (isinstance(_od_url_raw, str)
-                                   and _od_url_raw.startswith("http")) else "")
-                        _od_link_open  = f'<a href="{_od_url}" target="_blank" style="text-decoration:none;display:block">' if _od_url else ""
-                        _od_link_close = "</a>" if _od_url else ""
-                        _od_ver = (f'&nbsp;<a href="{_od_url}" target="_blank" '
-                                   f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
-                                   if _od_url else "")
-                        st.markdown(f"""
-                        {_od_link_open}<div style="background:#FFFFFF;border-radius:8px;
-                                    padding:0.55rem 0.75rem;margin-bottom:0.4rem;
-                                    border-left:3px solid {_clr_d};
-                                    box-shadow:0 1px 4px rgba(0,0,0,0.07)">
-                          <div style="font-size:0.75rem;font-weight:700;color:#111827;
-                                      margin-bottom:0.35rem;line-height:1.25">
-                            ⭐ {_od['SKU_canonico'][:55]}
-                          </div>
-                          <div style="display:flex;gap:1.2rem;align-items:flex-end">
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Precio oferta</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_od['pof']:,.0f}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Góndola</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#111827">${_od['pg']:,.0f}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:0.58rem;color:#374151;
-                                          text-transform:uppercase;letter-spacing:0.4px">Dto.</div>
-                              <div style="font-size:0.95rem;font-weight:800;color:#DC2626">-{_od['desc']:.0f}%</div>
-                            </div>
-                          </div>
-                          <div style="font-size:0.65rem;color:#374151;margin-top:0.3rem">
-                            🏪 {_od['Cadena']} &nbsp;·&nbsp; 🗓️ {_od_dur}{_od_ver}
-                          </div>
-                        </div>{_od_link_close}""", unsafe_allow_html=True)
 
     # ── Insights compactos ────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1343,7 +1109,7 @@ if _page_sel == "📊  Resumen":
 
         _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
                        [_KEY].drop_duplicates())
-        _of_extra = [c for c in ["Precio", "Precio_oferta", "Descuento_pct", "Producto", "Producto_url"] if c not in _KEY]
+        _of_extra = [c for c in ["Precio", "Precio_oferta", "Descuento_pct", "Producto", "Producto_url", "Marca_raw"] if c not in _KEY]
         _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
                        .drop_duplicates(subset=_KEY)
                        [_KEY + _of_extra]
@@ -1393,7 +1159,7 @@ if _page_sel == "📊  Resumen":
             if not _hay_algo:
                 st.info("Ningún cambio detectado entre las últimas dos semanas.")
             else:
-                _col_s, _col_b, _col_o = st.columns(3, gap="large")
+                _col_s, _col_b, _col_o, _col_dest = st.columns(4, gap="large")
                 with _col_s:
                     _titulo_col("🔴", "Subas", len(_subas))
                     if _subas.empty:
@@ -1444,6 +1210,49 @@ if _page_sel == "📊  Resumen":
                         f'<div style="max-height:420px;overflow-y:auto;padding-right:4px">{_of_html}</div>',
                         unsafe_allow_html=True,
                     )
+
+                # ── Columna 4: ofertas Zuelo / La Toscana / Oliovita ──────────
+                with _col_dest:
+                    _MARCAS_DEST = {"Zuelo", "La Toscana", "Oliovita"}
+                    _COLORES_DEST = {"Zuelo": "#0F3460", "La Toscana": "#B45309", "Oliovita": "#16A34A"}
+                    _dest_of_rows = (_con_of_act[_con_of_act.get("Marca_raw", pd.Series(dtype=str))
+                                                 .isin(_MARCAS_DEST)]
+                                     .sort_values("desc", ascending=False)
+                                     if "Marca_raw" in _con_of_act.columns
+                                     else pd.DataFrame())
+                    _n_dest = len(_dest_of_rows)
+                    _titulo_col("⭐", "Zuelo · Toscana · Oliovita", _n_dest, subtitulo="")
+                    if _dest_of_rows.empty:
+                        st.markdown("<span style='color:#9CA3AF;font-size:0.82rem'>Sin ofertas activas para estas marcas.</span>",
+                                    unsafe_allow_html=True)
+                    else:
+                        _dest_html_parts = []
+                        for _, _dr in _dest_of_rows.iterrows():
+                            _dr_marca = _dr.get("Marca_raw", "")
+                            _dr_color = _COLORES_DEST.get(_dr_marca, "#3B82F6")
+                            _dr_url_raw = _dr.get("Producto_url", "")
+                            _dr_url = (_dr_url_raw if (isinstance(_dr_url_raw, str)
+                                       and _dr_url_raw.startswith("http")) else "")
+                            _dr_ver = (f'&nbsp;<a href="{_dr_url}" target="_blank" '
+                                       f'style="font-size:0.68rem;color:#3B82F6;font-weight:600">Ver →</a>'
+                                       if _dr_url else "")
+                            _dr_prod = str(_dr.get("Producto", _dr.get("Producto_key", "")))
+                            _dest_html_parts.append(
+                                f"<div style='padding:5px 0 5px 8px;border-bottom:1px solid #E5E7EB;"
+                                f"border-left:3px solid {_dr_color};margin-bottom:2px'>"
+                                f"<span style='font-size:0.82rem;color:#111827'>"
+                                f"<b style='word-break:break-word'>{_dr_prod[:60]}</b><br>"
+                                f"<span style='color:#6B7280'>{_dr['Cadena']}</span>&nbsp;&nbsp;"
+                                f"<span style='color:#DC2626'>▼ {_dr['desc']:.0f}% dto.</span>"
+                                f"&nbsp;&nbsp;${_dr['p_gond']:,.0f} → <b>${_dr['p_of']:,.0f}</b>"
+                                f"{_dr_ver}"
+                                f"</span></div>"
+                            )
+                        st.markdown(
+                            f'<div style="max-height:420px;overflow-y:auto;padding-right:4px">'
+                            + "".join(_dest_html_parts) + "</div>",
+                            unsafe_allow_html=True,
+                        )
 
 
 # ══════════════════════════════════════════════════════════════════════════
