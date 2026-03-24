@@ -645,10 +645,8 @@ def _build_url(superm: str, pid: str, nombre: str) -> str | None:
     if _base and pid.startswith("/"):
         return _base + pid
     elif superm in ("Día", "Dia"):
-        _nfkd = unicodedata.normalize("NFKD", nombre.lower())
-        _slug = re.sub(r"[^a-z0-9]+", "-", "".join(
-            c for c in _nfkd if not unicodedata.combining(c))).strip("-")
-        return f"https://diaonline.supermercadosdia.com.ar/{_slug}-{pid}/p"
+        # Usamos búsqueda porque el slug exacto de Día es difícil de reconstruir
+        return f"https://diaonline.supermercadosdia.com.ar/busca?q={nombre_enc}"
     elif superm == "Carrefour":
         return f"https://www.carrefour.com.ar/busca?q={nombre_enc}"
     elif superm in ("Chango Mas", "Chango Más"):
