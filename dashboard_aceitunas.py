@@ -1059,13 +1059,19 @@ if active_page == "Resumen":
     _top_of: list[dict] = []
     _dest_of: list[dict] = []
     if not _of_now.empty:
+        # URL: la del producto con mayor descuento en cada grupo (no .first() genérico)
+        _of_url_df = (_of_now.sort_values("Descuento_pct", ascending=False)
+                      .dropna(subset=["URL"])
+                      .groupby(["Cadena", "SKU_canonico", "Marca_cat"])["URL"]
+                      .first().reset_index())
         _of_agg = (_of_now
                    .groupby(["Cadena", "SKU_canonico", "Marca_cat"])
                    .agg(desc=("Descuento_pct", "max"),
                         pof=("Precio_oferta", "min"),
-                        pg=("Precio", "mean"),
-                        url=("URL", "first"))
+                        pg=("Precio", "mean"))
                    .reset_index()
+                   .merge(_of_url_df, on=["Cadena", "SKU_canonico", "Marca_cat"], how="left")
+                   .rename(columns={"URL": "url"})
                    .sort_values("desc", ascending=False)
                    .reset_index(drop=True))
         _top_of   = _of_agg.head(3).to_dict("records")
