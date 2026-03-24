@@ -1722,11 +1722,12 @@ if _page_sel == "📈  Evolución":
             _pchart(fig_sku)
 
         # ── Análisis de cambios por SKU entre períodos ───────────────────────
-        if len(orden_per) >= 2 and _sku_sku4_sel:
+        if len(orden_per) >= 2 and (_sku_sku4_sel or _marca_sku4_sel):
             _per_ant4s = orden_per[-2]
             _per_act4s = orden_per[-1]
+            _skus_a_analizar = _sku_sku4_sel if _sku_sku4_sel else sorted(_src_chart4["SKU_canonico"].dropna().unique().tolist())
             _insights_sku = []
-            for _sku4 in _sku_sku4_sel:
+            for _sku4 in _skus_a_analizar:
                 _sa = _src_chart4[(_src_chart4["Periodo"]==_per_ant4s) & (_src_chart4["SKU_canonico"]==_sku4)]
                 _sb = _src_chart4[(_src_chart4["Periodo"]==_per_act4s) & (_src_chart4["SKU_canonico"]==_sku4)]
                 if _sa.empty and _sb.empty:
