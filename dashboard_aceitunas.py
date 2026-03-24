@@ -1621,68 +1621,129 @@ if active_page == "Por Marca":
 
 # ── TAB 5: Evolución ──────────────────────────────────────────────────────
 if active_page == "Evolución":
-    # Solo filtros Gramaje y Envase — Variedad/Cadena/Marca ya están en la barra lateral
-    _ev_g1, _ev_g2, _ev_sp = st.columns([1, 1, 4])
-    with _ev_g1:
-        st.markdown('<p style="color:#111827;font-size:0.8rem;font-weight:700;margin-bottom:1px">Gramaje</p>', unsafe_allow_html=True)
-        gram_ev_lbl = st.selectbox("Gramaje", ["Todos"] + grupos_labels, key="ev_gram", label_visibility="collapsed")
-    with _ev_g2:
-        st.markdown('<p style="color:#111827;font-size:0.8rem;font-weight:700;margin-bottom:1px">Envase</p>', unsafe_allow_html=True)
-        envase_ev = st.selectbox("Envase", ["Todos"] + envases_disp, key="ev_envase", label_visibility="collapsed")
-    st.markdown("---")
 
-    dff_ev = dff.dropna(subset=["Precio_100g"]).copy()
-    if gram_ev_lbl != "Todos":
-        _gram_ev_key = next((g for g, l in zip(grupos_disp, grupos_labels) if l == gram_ev_lbl), None)
-        if _gram_ev_key:
-            dff_ev = dff_ev[dff_ev["Gramaje"] == _gram_ev_key]
-    if envase_ev != "Todos":
-        dff_ev = dff_ev[dff_ev["Envase"] == envase_ev]
+    _ev_base = dff.dropna(subset=["Precio_100g"]).copy()
+    _marcas_ev_disp  = sorted(_ev_base["Marca_cat"].dropna().unique())
+    _vars_ev_disp    = sorted(_ev_base["Variedad"].dropna().unique())
+    _skus_ev_disp    = sorted(_ev_base["Producto"].dropna().unique())
 
-    if dff_ev.empty:
-        st.info("Sin datos con esta selección.")
-    else:
-        with st.expander("📈 Evolución de precio promedio ($/kg)", expanded=True):
-            st.markdown('<div class="chart-title">Evolución de $/kg promedio en el tiempo</div>', unsafe_allow_html=True)
-            grp = dff_ev.groupby("Fecha")["Precio_100g"].mean().mul(10).round(0).reset_index()
-            fig_ev = go.Figure(go.Scatter(
-                x=grp["Fecha"], y=grp["Precio_100g"],
-                mode="lines+markers", name="$/kg",
-                line=dict(color="#0F3460", width=2),
-                marker=dict(size=7),
-            ))
-            fig_ev.update_layout(**_BASE_CORE, height=380,
-                                 margin=dict(l=10, r=10, t=40, b=10),
-                                 yaxis=dict(tickprefix="$", tickformat=",",
-                                            tickfont=dict(color="#111827")),
-                                 xaxis=dict(tickfont=dict(color="#111827"),
-                                            type="date", tickformat="%d %b '%y"))
-            st.plotly_chart(fig_ev, use_container_width=True)
+    def _ev_layout(height=400):
+        return dict(**_BASE_CORE, height=height,
+                    margin=dict(l=10, r=10, t=40, b=10),
+                    yaxis=dict(tickprefix="$", tickformat=",", tickfont=dict(color="#111827")),
+                    xaxis=dict(tickfont=dict(color="#111827"), type="date", tickformat="%d %b '%y"),
+                    legend=dict(font=dict(color="#111827"), bgcolor="rgba(0,0,0,0)"))
 
-        with st.expander("🔖 Góndola vs. precio con oferta", expanded=True):
-          if dff_ev["En_oferta"].any():
-            st.markdown('<div class="chart-title">Precio góndola vs. precio con oferta</div>',
-                        unsafe_allow_html=True)
-            grp_gond = (dff_ev.groupby("Fecha")["Precio_100g"].mean().mul(10).round(0).reset_index()
-                        .rename(columns={"Precio_100g": "Góndola ($/kg)"}))
-            grp_ofr  = (dff_ev.groupby("Fecha")["Precio_100g_oferta"].mean().mul(10).round(0).reset_index()
-                        .rename(columns={"Precio_100g_oferta": "Con oferta ($/kg)"}))
-            merged_ev = grp_gond.merge(grp_ofr, on="Fecha")
-            fig_ov = go.Figure()
-            fig_ov.add_trace(go.Scatter(x=merged_ev["Fecha"], y=merged_ev["Góndola ($/kg)"],
-                                        name="Góndola", mode="lines+markers",
-                                        line=dict(color="#0F3460", width=2)))
-            fig_ov.add_trace(go.Scatter(x=merged_ev["Fecha"], y=merged_ev["Con oferta ($/kg)"],
-                                        name="Con oferta", mode="lines+markers",
-                                        line=dict(color="#00B050", width=2, dash="dot")))
-            fig_ov.update_layout(**_BASE_CORE, height=300, margin=dict(l=10, r=10, t=30, b=10),
-                                 yaxis=dict(tickprefix="$", tickformat=",",
-                                            tickfont=dict(color="#111827")),
-                                 xaxis=dict(tickfont=dict(color="#111827"),
-                                            type="date", tickformat="%d %b '%y"))
-            st.plotly_chart(fig_ov, use_container_width=True)
-          st.markdown('<div class="chart-note">$/kg promedio del segmento filtrado.</div>',
-                      unsafe_allow_html=True)
+    # ── Gráfico 1: Evolución por Marca ──────────────────────────────────────
+    with st.expander("📈 Evolución de precio por Marca ($/kg)", expanded=True):
+        _f1c1, _f1c2, _f1c3, _f1c4, _f1c5 = st.columns(5)
+        with _f1c1:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Gramaje</p>', unsafe_allow_html=True)
+            _ev1_gram_lbl = st.selectbox("Gramaje", ["Todos"] + grupos_labels, key="ev1_gram", label_visibility="collapsed")
+        with _f1c2:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Variedad</p>', unsafe_allow_html=True)
+            _ev1_var = st.selectbox("Variedad", ["Todas"] + _vars_ev_disp, key="ev1_var", label_visibility="collapsed")
+        with _f1c3:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Marca</p>', unsafe_allow_html=True)
+            _ev1_marcas = st.multiselect("Marca", _marcas_ev_disp, default=_marcas_ev_disp[:6], key="ev1_marca", label_visibility="collapsed")
+        with _f1c4:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Envase</p>', unsafe_allow_html=True)
+            _ev1_envase = st.selectbox("Envase", ["Todos"] + envases_disp, key="ev1_envase", label_visibility="collapsed")
+        with _f1c5:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">SKU</p>', unsafe_allow_html=True)
+            _ev1_sku = st.selectbox("SKU", ["Todos"] + list(_skus_ev_disp), key="ev1_sku", label_visibility="collapsed")
+
+        _d1 = _ev_base.copy()
+        if _ev1_gram_lbl != "Todos":
+            _gk1 = next((g for g, l in zip(grupos_disp, grupos_labels) if l == _ev1_gram_lbl), None)
+            if _gk1: _d1 = _d1[_d1["Gramaje"] == _gk1]
+        if _ev1_var != "Todas":
+            _d1 = _d1[_d1["Variedad"] == _ev1_var]
+        if _ev1_marcas:
+            _d1 = _d1[_d1["Marca_cat"].isin(_ev1_marcas)]
+        if _ev1_envase != "Todos":
+            _d1 = _d1[_d1["Envase"] == _ev1_envase]
+        if _ev1_sku != "Todos":
+            _d1 = _d1[_d1["Producto"] == _ev1_sku]
+
+        if _d1.empty:
+            st.info("Sin datos con esta selección.")
+        else:
+            _grp1 = (_d1.groupby(["Fecha", "Marca_cat"])["Precio_100g"]
+                     .mean().mul(10).round(0).reset_index())
+            _fig1 = go.Figure()
+            for _m in sorted(_grp1["Marca_cat"].unique()):
+                _sub = _grp1[_grp1["Marca_cat"] == _m]
+                _col = COLORES_MARCA_AC.get(_m, "#9CA3AF")
+                _fig1.add_trace(go.Scatter(
+                    x=_sub["Fecha"], y=_sub["Precio_100g"],
+                    mode="lines+markers", name=_m,
+                    line=dict(color=_col, width=2),
+                    marker=dict(size=6),
+                ))
+            _fig1.update_layout(**_ev_layout(420))
+            st.plotly_chart(_fig1, use_container_width=True)
+
+    # ── Gráfico 2: Evolución por SKU (producto individual) ──────────────────
+    with st.expander("🔍 Evolución de precio por SKU ($/kg)", expanded=True):
+        _f2c1, _f2c2, _f2c3, _f2c4, _f2c5 = st.columns(5)
+        with _f2c1:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Gramaje</p>', unsafe_allow_html=True)
+            _ev2_gram_lbl = st.selectbox("Gramaje", ["Todos"] + grupos_labels, key="ev2_gram", label_visibility="collapsed")
+        with _f2c2:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Variedad</p>', unsafe_allow_html=True)
+            _ev2_var = st.selectbox("Variedad", ["Todas"] + _vars_ev_disp, key="ev2_var", label_visibility="collapsed")
+        with _f2c3:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Marca</p>', unsafe_allow_html=True)
+            _ev2_marca = st.selectbox("Marca", ["Todas"] + _marcas_ev_disp, key="ev2_marca", label_visibility="collapsed")
+        with _f2c4:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Envase</p>', unsafe_allow_html=True)
+            _ev2_envase = st.selectbox("Envase", ["Todos"] + envases_disp, key="ev2_envase", label_visibility="collapsed")
+        with _f2c5:
+            st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">SKU</p>', unsafe_allow_html=True)
+            _ev2_sku_opts = sorted(_ev_base["Producto"].dropna().unique())
+            _ev2_skus = st.multiselect("SKU", _ev2_sku_opts, default=[], key="ev2_sku",
+                                       placeholder="Elegí productos…", label_visibility="collapsed")
+
+        _d2 = _ev_base.copy()
+        if _ev2_gram_lbl != "Todos":
+            _gk2 = next((g for g, l in zip(grupos_disp, grupos_labels) if l == _ev2_gram_lbl), None)
+            if _gk2: _d2 = _d2[_d2["Gramaje"] == _gk2]
+        if _ev2_var != "Todas":
+            _d2 = _d2[_d2["Variedad"] == _ev2_var]
+        if _ev2_marca != "Todas":
+            _d2 = _d2[_d2["Marca_cat"] == _ev2_marca]
+        if _ev2_envase != "Todos":
+            _d2 = _d2[_d2["Envase"] == _ev2_envase]
+        if _ev2_skus:
+            _d2 = _d2[_d2["Producto"].isin(_ev2_skus)]
+
+        if _d2.empty or (not _ev2_skus and _ev2_marca == "Todas" and _ev2_var == "Todas"):
+            st.info("Usá los filtros de arriba para elegir productos específicos a comparar.")
+        else:
+            # Agrupar por (Fecha, Cadena, Producto) para mostrar precio real por SKU
+            _grp2 = (_d2.groupby(["Fecha", "Producto"])["Precio_100g"]
+                     .mean().mul(10).round(0).reset_index())
+            _fig2 = go.Figure()
+            _palette = ["#0F3460","#16A34A","#DC2626","#D97706","#7C3AED",
+                        "#0891B2","#DB2777","#65A30D","#EA580C","#0284C7"]
+            for _i, _prod in enumerate(_grp2["Producto"].unique()):
+                _sub2 = _grp2[_grp2["Producto"] == _prod]
+                _col2 = _palette[_i % len(_palette)]
+                # Nombre corto para la leyenda
+                _lbl = _prod if len(_prod) <= 45 else _prod[:43] + "…"
+                _fig2.add_trace(go.Scatter(
+                    x=_sub2["Fecha"], y=_sub2["Precio_100g"],
+                    mode="lines+markers", name=_lbl,
+                    line=dict(color=_col2, width=2),
+                    marker=dict(size=6),
+                    hovertemplate=f"<b>{_prod}</b><br>%{{x|%d %b %Y}}<br>${{y:,.0f}}/kg<extra></extra>",
+                ))
+            _fig2.update_layout(**_ev_layout(450),
+                                legend=dict(orientation="v", x=1.01, xanchor="left",
+                                            font=dict(size=10, color="#111827"),
+                                            bgcolor="rgba(0,0,0,0)"))
+            st.plotly_chart(_fig2, use_container_width=True)
 
 
 # ── TAB 6: Ofertas ────────────────────────────────────────────────────────
