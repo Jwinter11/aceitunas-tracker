@@ -57,14 +57,26 @@ _MARCA_CORRECCIONES: dict[str, str] = {
     "Malague\xf1a":     "La Malagueña",   # encoding fix
 }
 
-# Estas extracciones del scraper NO son marcas → se descartan como "Otras"
+# Extracciones del scraper que NO son marcas (alimentos, descriptores, preparaciones)
+# → se descartan y quedan como Marca Propia de la cadena
 _PALABRAS_NO_MARCA: set[str] = {
-    "Manzanilla", "Enteras", "Entera", "Ajo", "Salmón", "Salm", "Anchoas",
-    "Pimiento", "Pimientos", "Orgánicas", "Clásicas", "Clásica", "Ver",
-    "Rell.con", "Queso", "Picantes", "Pasta", "Parmesano", "Palmitos",
-    "Negr", "Naturales", "Morrones", "Morron", "Morrón", "C/morrón",
-    "Jamón", "Jamon", "Jalapeños", "Españolas", "Alcaparras",
-    "Aceitunas.verdes", "Check", "Doy", "Picantes", "Aceitunas",
+    # Variedades / preparaciones
+    "Manzanilla", "Enteras", "Entera", "Descarozada", "Descarozadas",
+    "Descarozado", "Carozo", "Rodajas", "Trozos", "Picadas",
+    "Rellenas", "Rellena", "Rell.con",
+    # Sabores / rellenos
+    "Ajo", "Anchoas", "Jalapeños", "Jalapeño", "Pimiento", "Pimientos",
+    "Morrones", "Morron", "Morrón", "C/morrón", "Salmon", "Salmón", "Salm",
+    "Queso", "Parmesano", "Jamón", "Jamon", "Pasta", "Picantes", "Picante",
+    "Ahumado", "Ahumada",
+    # Tipos de envase confundidos como marca
+    "Doy", "Check",
+    # Calificativos / adjetivos
+    "Clásica", "Clásicas", "Clasica", "Clasicas", "Orgánicas", "Organicas",
+    "Naturales", "Españolas", "Espanolas", "Ver", "Negr", "Palmitos",
+    "Alcaparras",
+    # Palabras genéricas
+    "Aceitunas", "Aceitunas.verdes",
 }
 
 
