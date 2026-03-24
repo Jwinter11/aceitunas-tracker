@@ -200,7 +200,8 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                 nombre = item.get("productName", "")
                 if not es_aceite_oliva(nombre):
                     continue
-                prod_id = item.get("productId", nombre)
+                prod_id   = item.get("productId", nombre)   # solo para dedup
+                link_text = item.get("linkText", "")        # slug para URL real
                 if prod_id in vistos:
                     continue
                 vistos.add(prod_id)
@@ -263,7 +264,7 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                     "precio":         round(price, 2),
                     "precio_sin_dto":  round(precio_sin, 2) if precio_sin else None,
                     "en_oferta":      en_oferta,
-                    "producto_id":    str(prod_id),
+                    "producto_id":    f"/{link_text}/p" if link_text else str(prod_id),
                 })
                 nuevos += 1
 
@@ -1060,7 +1061,10 @@ def guardar_en_sqlite(productos: list[dict], fecha: str) -> None:
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
     _init_db(cur)
-    cur.execute("DELETE FROM precios WHERE fecha = ?", (fecha,))
+    # Solo borrar los supermercados que vienen en este lote — no pisar datos de otras cadenas
+    _supermercados = list({p.get("supermercado", "") for p in productos if p.get("supermercado")})
+    for _sup in _supermercados:
+        cur.execute("DELETE FROM precios WHERE fecha = ? AND supermercado = ?", (fecha, _sup))
     cur.executemany("""
         INSERT OR IGNORE INTO precios
           (fecha, supermercado, nombre, ml, precio, precio_sin_dto,

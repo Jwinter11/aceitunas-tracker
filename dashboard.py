@@ -629,9 +629,12 @@ def _historial_mtime():
     return p.stat().st_mtime if p.exists() else 0
 
 _URL_BASE_CADENA = {
+    "Carrefour":   "https://www.carrefour.com.ar",
     "Jumbo":       "https://www.jumbo.com.ar",
     "Disco":       "https://www.disco.com.ar",
     "Vea":         "https://www.vea.com.ar",
+    "Día":         "https://diaonline.supermercadosdia.com.ar",
+    "Dia":         "https://diaonline.supermercadosdia.com.ar",
     "Coto":        "https://www.cotodigital.com.ar",
     "La Anonima":  "https://www.laanonima.com.ar",
     "La Anónima":  "https://www.laanonima.com.ar",
@@ -639,20 +642,25 @@ _URL_BASE_CADENA = {
     "Chango Más":  "https://www.masonline.com.ar",
 }
 
+_SEARCH_URL = {
+    "Carrefour":   "https://www.carrefour.com.ar/busca?q={}",
+    "Día":         "https://diaonline.supermercadosdia.com.ar/busca?q={}",
+    "Dia":         "https://diaonline.supermercadosdia.com.ar/busca?q={}",
+    "Chango Mas":  "https://www.masonline.com.ar/busca?q={}",
+    "Chango Más":  "https://www.masonline.com.ar/busca?q={}",
+    "La Anonima":  "https://www.laanonima.com.ar/busca/?q={}",
+    "La Anónima":  "https://www.laanonima.com.ar/busca/?q={}",
+}
+
 def _build_url(superm: str, pid: str, nombre: str) -> str | None:
     nombre_enc = quote_plus(nombre)
     _base = _URL_BASE_CADENA.get(superm, "")
+    # Path directo (scraper lo guardó como /slug/p)
     if _base and pid.startswith("/"):
         return _base + pid
-    elif superm in ("Día", "Dia"):
-        # Usamos búsqueda porque el slug exacto de Día es difícil de reconstruir
-        return f"https://diaonline.supermercadosdia.com.ar/busca?q={nombre_enc}"
-    elif superm == "Carrefour":
-        return f"https://www.carrefour.com.ar/busca?q={nombre_enc}"
-    elif superm in ("Chango Mas", "Chango Más"):
-        return f"https://www.masonline.com.ar/busca?q={nombre_enc}"
-    elif superm in ("La Anonima", "La Anónima"):
-        return f"https://www.laanonima.com.ar/busca/?q={nombre_enc}"
+    # Fallback: búsqueda por nombre (datos viejos con ID numérico)
+    if superm in _SEARCH_URL:
+        return _SEARCH_URL[superm].format(nombre_enc)
     return None
 
 
@@ -1016,7 +1024,8 @@ if _page_sel == "📊  Resumen":
         _sin_of_ant = (df_full[(df_full["Fecha"] == _fn_ant) & (~df_full["En_oferta"])]
                        [_KEY].drop_duplicates())
         _of_extra = [c for c in ["Precio", "Precio_oferta", "Descuento_pct", "Producto", "Producto_url", "Marca_raw"] if c not in _KEY]
-        _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]]
+        _con_of_act = (df_full[(df_full["Fecha"] == _fn_act) & df_full["En_oferta"]
+                               & (df_full["Descuento_pct"] >= 10)]   # <10% = diferencia de lista, no promo real
                        .drop_duplicates(subset=_KEY)
                        [_KEY + _of_extra]
                        .rename(columns={"Precio": "p_gond", "Precio_oferta": "p_of",

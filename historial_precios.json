@@ -18641,7 +18641,7 @@
           "precio": 33359.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "726488",
+          "producto_id": "/aceite-de-oliva-lira-en-lata-1-lt-726488/p",
           "marca": "Lira",
           "precio_litro": 33359
         },
@@ -18652,7 +18652,7 @@
           "precio": 29429.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "500990",
+          "producto_id": "/aceite-de-oliva-terrasana-extra-virgen-organico-500-cc/p",
           "marca": "Terrasana",
           "precio_litro": 58858
         },
@@ -18663,7 +18663,7 @@
           "precio": 25990.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "163912",
+          "producto_id": "/aceite-de-oliva-filippo-berio-extra-virgen-500-cc/p",
           "marca": "Filippo Berio",
           "precio_litro": 51980
         },
@@ -18674,7 +18674,7 @@
           "precio": 23195.9,
           "precio_sin_dto": 25490.0,
           "en_oferta": true,
-          "producto_id": "756151",
+          "producto_id": "/aceite-de-oliva-extra-virgen-carrefour-extra-en-botella-1-lt-756151/p",
           "marca": "Carrefour",
           "precio_litro": 23196
         },
@@ -18685,7 +18685,7 @@
           "precio": 22990.8,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "763334",
+          "producto_id": "/aceite-de-oliva-virgen-carrefour-classic-en-lata-1-lt-763334/p",
           "marca": "Carrefour",
           "precio_litro": 22991
         },
@@ -18696,7 +18696,7 @@
           "precio": 20874.8,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "394471",
+          "producto_id": "/aceite-de-oliva-carrefour-classic-virgen-lata-1-l/p",
           "marca": "Carrefour",
           "precio_litro": 20875
         },
@@ -18707,7 +18707,7 @@
           "precio": 20482.6,
           "precio_sin_dto": 21790.0,
           "en_oferta": true,
-          "producto_id": "441324",
+          "producto_id": "/aceite-de-oliva-carrefour-classic-virgen-1-l/p",
           "marca": "Carrefour",
           "precio_litro": 20483
         },
@@ -18718,7 +18718,7 @@
           "precio": 20049.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "452952",
+          "producto_id": "/aceite-de-oliva-extra-virgen-zuelo-original-en-botella-500-grs-452952/p",
           "marca": "Zuelo",
           "precio_litro": 40098
         },
@@ -18729,7 +18729,7 @@
           "precio": 19260.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "719058",
+          "producto_id": "/aceite-de-oliva-cortijo-el-olivar-extra-virgen-en-botella-500-cc-719058/p",
           "marca": "Cortijo",
           "precio_litro": 38520
         },
@@ -18740,7 +18740,7 @@
           "precio": 18279.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "397456",
+          "producto_id": "/aceite-de-oliva-la-toscana-extra-virgen-500-cc/p",
           "marca": "La Toscana",
           "precio_litro": 36558
         },
@@ -18751,7 +18751,7 @@
           "precio": 17990.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "417811",
+          "producto_id": "/aceite-de-oliva-filippo-berio-extra-virgen-250-cc/p",
           "marca": "Filippo Berio",
           "precio_litro": 71960
         },
@@ -18762,7 +18762,7 @@
           "precio": 17901.0,
           "precio_sin_dto": 19890.0,
           "en_oferta": true,
-          "producto_id": "607586",
+          "producto_id": "/aceite-de-oliva-carrefour-extra-virgen-organico-botella-500-cc/p",
           "marca": "Carrefour",
           "precio_litro": 35802
         },
@@ -18773,7 +18773,7 @@
           "precio": 17769.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "391022",
+          "producto_id": "/aceite-de-oliva-oliovita-clasico-extra-virgen-500-cc/p",
           "marca": "Oliovita",
           "precio_litro": 35538
         },
@@ -18784,7 +18784,7 @@
           "precio": 17299.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "732143",
+          "producto_id": "/aceite-de-oliva-extra-virgen-natura-andino-500-cc-732143/p",
           "marca": "Natura",
           "precio_litro": 34598
         },
@@ -18795,7 +18795,7 @@
           "precio": 17160.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "575440",
+          "producto_id": "/aceite-de-oliva-canuelas-clasico-extra-virgen-500-cc/p",
           "marca": "Cañuelas",
           "precio_litro": 34320
         },
@@ -18806,7 +18806,7 @@
           "precio": 17160.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "575445",
+          "producto_id": "/aceite-de-oliva-canuelas-extra-virgen-intenso-500-cc-43594/p",
           "marca": "Cañuelas",
           "precio_litro": 34320
         },
@@ -18817,7 +18817,7 @@
           "precio": 17000.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "670226",
+          "producto_id": "/aceite-de-oliva-maelca-organico-botella-500-cc/p",
           "marca": "Maelca",
           "precio_litro": 34000
         },
@@ -18828,7 +18828,7 @@
           "precio": 15015.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "682232",
+          "producto_id": "/aceite-de-oliva-extra-virgen-lira-pet-500-cc/p",
           "marca": "Lira",
           "precio_litro": 30030
         },
@@ -18839,7 +18839,7 @@
           "precio": 14859.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "575442",
+          "producto_id": "/aceite-de-oliva-canuelas-extra-virgen-clasico-pet-500-cc/p",
           "marca": "Cañuelas",
           "precio_litro": 29718
         },
@@ -18850,7 +18850,7 @@
           "precio": 14859.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "575443",
+          "producto_id": "/aceite-de-oliva-canuelas-extra-virgen-suave-pico-dosificador-500-cc-575443/p",
           "marca": "Cañuelas",
           "precio_litro": 29718
         },
@@ -18861,7 +18861,7 @@
           "precio": 14480.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "732141",
+          "producto_id": "/aceite-de-oliva-virgen-natura-extra-fuerte-500-cc-732141/p",
           "marca": "Natura",
           "precio_litro": 28960
         },
@@ -18872,7 +18872,7 @@
           "precio": 14475.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "732142",
+          "producto_id": "/aceite-de-oliva-virgen-natura-extra-suave-500-cc-732142/p",
           "marca": "Natura",
           "precio_litro": 28950
         },
@@ -18883,7 +18883,7 @@
           "precio": 13650.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "721204",
+          "producto_id": "/aceite-de-oliva-cocinero-extra-virgen-pet-500-cc-721204/p",
           "marca": "Cocinero",
           "precio_litro": 27300
         },
@@ -18894,7 +18894,7 @@
           "precio": 13650.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "682235",
+          "producto_id": "/aceite-de-oliva-extra-virgen-cocinero-suave-500-cc/p",
           "marca": "Cocinero",
           "precio_litro": 27300
         },
@@ -18905,7 +18905,7 @@
           "precio": 13500.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "668788",
+          "producto_id": "/aceite-de-oliva-morixe-extra-virgen-500-cc-25367/p",
           "marca": "Morixe",
           "precio_litro": 27000
         },
@@ -18916,7 +18916,7 @@
           "precio": 13259.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "436123",
+          "producto_id": "/aceite-de-oliva-oliovita-extra-virgen-500-cc/p",
           "marca": "Oliovita",
           "precio_litro": 26518
         },
@@ -18927,7 +18927,7 @@
           "precio": 13259.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "539357",
+          "producto_id": "/aceite-de-oliva-oliovita-meditarraneo-extra-virgen-500-cc/p",
           "marca": "Oliovita",
           "precio_litro": 26518
         },
@@ -18938,7 +18938,7 @@
           "precio": 13100.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "684014",
+          "producto_id": "/aceite-de-oliva-extra-virgen-morixe-vidrio-500-cc/p",
           "marca": "Morixe",
           "precio_litro": 26200
         },
@@ -18949,7 +18949,7 @@
           "precio": 12990.0,
           "precio_sin_dto": 15990.0,
           "en_oferta": true,
-          "producto_id": "764966",
+          "producto_id": "/aceite-de-oliva-extra-virgen-pietro-coricelli-500-ml-764966/p",
           "marca": "Pietro Coricelli",
           "precio_litro": 25980
         },
@@ -18960,7 +18960,7 @@
           "precio": 12558.0,
           "precio_sin_dto": 13650.0,
           "en_oferta": true,
-          "producto_id": "682234",
+          "producto_id": "/aceite-de-oliva-extra-virgen-cocinero-intenso-500-cc/p",
           "marca": "Cocinero",
           "precio_litro": 25116
         },
@@ -18971,7 +18971,7 @@
           "precio": 12019.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "719057",
+          "producto_id": "/aceite-de-oliva-cortijo-el-olivar-extra-virgen-en-botella-250-cc-719057/p",
           "marca": "Cortijo",
           "precio_litro": 48076
         },
@@ -18982,7 +18982,7 @@
           "precio": 11561.1,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "763333",
+          "producto_id": "/aceite-de-oliva-virgen-carrefour-classic-en-lata-500-ml-763333/p",
           "marca": "Carrefour",
           "precio_litro": 23122
         },
@@ -18993,7 +18993,7 @@
           "precio": 11030.8,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "756150",
+          "producto_id": "/aceite-de-oliva-extra-virgen-carrefour-extra-en-botella-500-ml-756150/p",
           "marca": "Carrefour",
           "precio_litro": 22062
         },
@@ -19004,7 +19004,7 @@
           "precio": 10791.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "331628",
+          "producto_id": "/aceite-de-oliva-virgen-carrefour-classic-lata-500-ml-331628/p",
           "marca": "Carrefour",
           "precio_litro": 21582
         },
@@ -19015,7 +19015,7 @@
           "precio": 10662.8,
           "precio_sin_dto": 11590.0,
           "en_oferta": true,
-          "producto_id": "441323",
+          "producto_id": "/aceite-de-oliva-carrefour-classic-virgen-en-botella-500-ml-441323/p",
           "marca": "Carrefour",
           "precio_litro": 21326
         },
@@ -19026,7 +19026,7 @@
           "precio": 9860.6,
           "precio_sin_dto": 10490.0,
           "en_oferta": true,
-          "producto_id": "763331",
+          "producto_id": "/aceite-de-oliva-virgen-carrefour-classic-pet-500-ml-763331/p",
           "marca": "Carrefour",
           "precio_litro": 19721
         },
@@ -19037,7 +19037,7 @@
           "precio": 9315.6,
           "precio_sin_dto": 11090.0,
           "en_oferta": true,
-          "producto_id": "610669",
+          "producto_id": "/aceite-de-oliva-carrefour-selection-extra-virgen-250-cc/p",
           "marca": "Carrefour",
           "precio_litro": 37262
         },
@@ -19048,7 +19048,7 @@
           "precio": 8362.9,
           "precio_sin_dto": 9190.0,
           "en_oferta": true,
-          "producto_id": "746346",
+          "producto_id": "/aceite-de-oliva-con-dosificador-carrefour-extra-200-cc-746346/p",
           "marca": "Carrefour",
           "precio_litro": 41814
         },
@@ -19059,7 +19059,7 @@
           "precio": 7495.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "722003",
+          "producto_id": "/aceite-de-oliva-cocinero-extra-virgen-pet-250-cc-722003/p",
           "marca": "Cocinero",
           "precio_litro": 29980
         },
@@ -19070,7 +19070,7 @@
           "precio": 11550.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "721205",
+          "producto_id": "/aceite-de-oliva-cocinero-puro-pet-500-cc-721205/p",
           "marca": "Cocinero",
           "precio_litro": 23100
         },
@@ -19081,7 +19081,7 @@
           "precio": 5530.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "637285",
+          "producto_id": "/aceite-en-aerosol-canuelas-de-oliva-187-cc-35786/p",
           "marca": "Cañuelas",
           "precio_litro": 29572
         },
@@ -19092,7 +19092,7 @@
           "precio": 17195.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "299225",
+          "producto_id": "/aceite-de-oliva-extra-virgen-sin-tacc-lira-500-ml-299225/p",
           "marca": "Lira",
           "precio_litro": 34390
         },
@@ -19103,7 +19103,7 @@
           "precio": 14060.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "276153",
+          "producto_id": "/aceite-de-oliva-cocinero-extra-virgen-intenso-500-ml-276153/p",
           "marca": "Cocinero",
           "precio_litro": 28120
         },
@@ -19114,7 +19114,7 @@
           "precio": 14060.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "276154",
+          "producto_id": "/aceite-de-oliva-cocinero-extra-virgen-suave-500-ml-276154/p",
           "marca": "Cocinero",
           "precio_litro": 28120
         },
@@ -19125,7 +19125,7 @@
           "precio": 13985.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "179862",
+          "producto_id": "/aceite-oliva-nucete-extra-virgen-envase-de-vidrio-500-ml-179862/p",
           "marca": "Nucete",
           "precio_litro": 27970
         },
@@ -19136,7 +19136,7 @@
           "precio": 12900.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "141913",
+          "producto_id": "/aceite-oliva-extra-virgen-clasico-envase-de-vidrio-dia-500-ml-141913/p",
           "marca": "Día",
           "precio_litro": 25800
         },
@@ -19147,7 +19147,7 @@
           "precio": 11500.0,
           "precio_sin_dto": 15215.0,
           "en_oferta": true,
-          "producto_id": "137137",
+          "producto_id": "/aceite-de-oliva-extra-virgen-canuelas-500-ml-137137/p",
           "marca": "Cañuelas",
           "precio_litro": 23000
         },
@@ -19158,7 +19158,7 @@
           "precio": 8900.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "306005",
+          "producto_id": "/aceite-de-oliva-virgen-botella-pet-dia-500-gr-306005/p",
           "marca": "Día",
           "precio_litro": 17800
         },
@@ -19169,7 +19169,7 @@
           "precio": 8900.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "308800",
+          "producto_id": "/aceite-oliva-extra-virgen-la-toscana-250-ml-308800/p",
           "marca": "La Toscana",
           "precio_litro": 35600
         },
@@ -19180,7 +19180,7 @@
           "precio": 7725.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "297672",
+          "producto_id": "/aceite-oliva-virgen-extra-clasico-nucete-250-ml-297672/p",
           "marca": "Nucete",
           "precio_litro": 30900
         },
@@ -19191,7 +19191,7 @@
           "precio": 7100.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "1864",
+          "producto_id": "/aceite-de-oliva-extra-virgen-envase-de-vidrio-dia-250-ml-1864/p",
           "marca": "Día",
           "precio_litro": 28400
         },
@@ -19202,7 +19202,7 @@
           "precio": 15215.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "144153",
+          "producto_id": "/aceite-de-oliva-canuelas-clasico-500-ml-144153/p",
           "marca": "Cañuelas",
           "precio_litro": 30430
         },
@@ -19213,7 +19213,7 @@
           "precio": 14910.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "304972",
+          "producto_id": "/aceite-de-oliva-suave-natura-500-ml-304972/p",
           "marca": "Natura",
           "precio_litro": 29820
         },
@@ -19224,7 +19224,7 @@
           "precio": 13100.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "308912",
+          "producto_id": "/aceite-de-oliva-vidrio-morixe-500-ml-308912/p",
           "marca": "Morixe",
           "precio_litro": 26200
         },
@@ -19235,7 +19235,7 @@
           "precio": 11500.0,
           "precio_sin_dto": null,
           "en_oferta": false,
-          "producto_id": "308799",
+          "producto_id": "/aceite-oliva-con-albahaca-la-toscana-250-ml-308799/p",
           "marca": "La Toscana",
           "precio_litro": 46000
         },
@@ -19260,6 +19260,17 @@
           "producto_id": "/aceite-oliva-extra-virgen-intenso-cocinero-500-ml/p",
           "marca": "Cocinero",
           "precio_litro": 29400
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite De Oliva Oliovita Extra Virgen Clásico 500 Ml",
+          "ml": 500,
+          "precio": 19850.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/aceite-de-oliva-oliovita-extra-virgen-clasico-500-ml/p",
+          "marca": "Oliovita",
+          "precio_litro": 39700
         },
         {
           "supermercado": "Jumbo",
@@ -19582,17 +19593,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite Oliva Genovesa Zuccardi 500 Ml",
-          "ml": 500,
-          "precio": 28350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/aceite-oliva-genovesa-zuccardi-500-ml/p",
-          "marca": "Familia Zuccardi",
-          "precio_litro": 56700
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Nucete Extra Virgen Intenso 500 Ml",
           "ml": 500,
           "precio": 16900.0,
@@ -19601,6 +19601,17 @@
           "producto_id": "/aceite-de-oliva-extra-virgen-intenso-nucete-500-ml/p",
           "marca": "Nucete",
           "precio_litro": 33800
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite Oliva Genovesa Zuccardi 500 Ml",
+          "ml": 500,
+          "precio": 28350.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/aceite-oliva-genovesa-zuccardi-500-ml/p",
+          "marca": "Familia Zuccardi",
+          "precio_litro": 56700
         },
         {
           "supermercado": "Jumbo",
@@ -19637,17 +19648,6 @@
         },
         {
           "supermercado": "Jumbo",
-          "nombre": "Aceite Oliva Picual Zuccardi 500 Ml",
-          "ml": 500,
-          "precio": 28350.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/aceite-oliva-picual-zuccardi-500-ml/p",
-          "marca": "Familia Zuccardi",
-          "precio_litro": 56700
-        },
-        {
-          "supermercado": "Jumbo",
           "nombre": "Aceite De Oliva Extra Virgen 1 Lts Cuisine & Co",
           "ml": 1000,
           "precio": 40520.0,
@@ -19656,6 +19656,17 @@
           "producto_id": "/aceite-de-oliva-extra-virgen-1-lts-cuisine-co/p",
           "marca": "Cousine & Co",
           "precio_litro": 40520
+        },
+        {
+          "supermercado": "Jumbo",
+          "nombre": "Aceite Oliva Picual Zuccardi 500 Ml",
+          "ml": 500,
+          "precio": 28350.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/aceite-oliva-picual-zuccardi-500-ml/p",
+          "marca": "Familia Zuccardi",
+          "precio_litro": 56700
         },
         {
           "supermercado": "Jumbo",
@@ -20561,17 +20572,6 @@
         },
         {
           "supermercado": "Vea",
-          "nombre": "Aceite De Oliva Mediterráneo Oliovita 500 Ml",
-          "ml": 500,
-          "precio": 14150.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/aceite-de-oliva-mediterraneo-oliovita-500-ml/p",
-          "marca": "Oliovita",
-          "precio_litro": 28300
-        },
-        {
-          "supermercado": "Vea",
           "nombre": "Aceite De Oliva Oliovita Extra Virgen Clásico 500 Ml",
           "ml": 500,
           "precio": 19450.0,
@@ -20580,6 +20580,17 @@
           "producto_id": "/aceite-de-oliva-oliovita-extra-virgen-clasico-500-ml/p",
           "marca": "Oliovita",
           "precio_litro": 38900
+        },
+        {
+          "supermercado": "Vea",
+          "nombre": "Aceite De Oliva Mediterráneo Oliovita 500 Ml",
+          "ml": 500,
+          "precio": 14150.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/aceite-de-oliva-mediterraneo-oliovita-500-ml/p",
+          "marca": "Oliovita",
+          "precio_litro": 28300
         },
         {
           "supermercado": "Vea",
@@ -21672,17 +21683,6 @@
         },
         {
           "supermercado": "Coto",
-          "nombre": "Aceite Oliva Extra Virgen Medio Casalta Bot 400 Ml",
-          "ml": 400,
-          "precio": 20023.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-medio-casalta-bot-400-ml-/_/R-00297778-00297778-200",
-          "marca": "Casalta",
-          "precio_litro": 50058
-        },
-        {
-          "supermercado": "Coto",
           "nombre": "Aceite Oliva Virgen Extra Oliovita Botella 500 Ml",
           "ml": 500,
           "precio": 21473.0,
@@ -21691,6 +21691,17 @@
           "producto_id": "/sitios/cdigi/productos/aceite-oliva-virgen-extra-oliovita-botella-500-ml-/_/R-00479458-00479458-200",
           "marca": "Oliovita",
           "precio_litro": 42946
+        },
+        {
+          "supermercado": "Coto",
+          "nombre": "Aceite Oliva Extra Virgen Medio Casalta Bot 400 Ml",
+          "ml": 400,
+          "precio": 20023.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-medio-casalta-bot-400-ml-/_/R-00297778-00297778-200",
+          "marca": "Casalta",
+          "precio_litro": 50058
         },
         {
           "supermercado": "Coto",
@@ -21958,17 +21969,6 @@
         },
         {
           "supermercado": "Coto",
-          "nombre": "Aceite Oliva Extra Virgen LA TOSCANA Con Limón Botella 250 Ml",
-          "ml": 250,
-          "precio": 13126.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-la-toscana-con-limon-botella-250-ml-/_/R-00267254-00267254-200",
-          "marca": "La Toscana",
-          "precio_litro": 52504
-        },
-        {
-          "supermercado": "Coto",
           "nombre": "Aceite Oliva Extra Virgen Fruttato Filippo Berio Bot 500 Ml",
           "ml": 500,
           "precio": 48590.0,
@@ -21977,6 +21977,17 @@
           "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-fruttato-filippo-berio-bot-500-ml-/_/R-00195703-00195703-200",
           "marca": "Filippo Berio",
           "precio_litro": 97180
+        },
+        {
+          "supermercado": "Coto",
+          "nombre": "Aceite Oliva Extra Virgen LA TOSCANA Con Limón Botella 250 Ml",
+          "ml": 250,
+          "precio": 13126.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-la-toscana-con-limon-botella-250-ml-/_/R-00267254-00267254-200",
+          "marca": "La Toscana",
+          "precio_litro": 52504
         },
         {
           "supermercado": "Coto",
@@ -22068,17 +22079,6 @@
         },
         {
           "supermercado": "Coto",
-          "nombre": "Aceite Oliva Extra Virgen Con Ají Picante LA TOSCANA 250ml",
-          "ml": 250,
-          "precio": 13126.0,
-          "precio_sin_dto": null,
-          "en_oferta": false,
-          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-con-aji-picante-la-toscana-250ml-/_/R-00480493-00480493-200",
-          "marca": "La Toscana",
-          "precio_litro": 52504
-        },
-        {
-          "supermercado": "Coto",
           "nombre": "Aceite Oliva Virgen Extra OLIOVITA Botella 1 L",
           "ml": 1000,
           "precio": 41000.0,
@@ -22087,6 +22087,17 @@
           "producto_id": "/sitios/cdigi/productos/aceite-oliva-virgen-extra-oliovita-botella-1-l-/_/R-00481562-00481562-200",
           "marca": "Oliovita",
           "precio_litro": 41000
+        },
+        {
+          "supermercado": "Coto",
+          "nombre": "Aceite Oliva Extra Virgen Con Ají Picante LA TOSCANA 250ml",
+          "ml": 250,
+          "precio": 13126.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/sitios/cdigi/productos/aceite-oliva-extra-virgen-con-aji-picante-la-toscana-250ml-/_/R-00480493-00480493-200",
+          "marca": "La Toscana",
+          "precio_litro": 52504
         },
         {
           "supermercado": "Coto",
@@ -22197,6 +22208,17 @@
           "producto_id": "/sitios/cdigi/productos/aceite-oliva-virgen-extra-zuelo-box-2-l-/_/R-00489603-00489603-200",
           "marca": "Zuelo",
           "precio_litro": 41642
+        },
+        {
+          "supermercado": "Coto",
+          "nombre": "Aceite Oliva Virgen Extra Frantoio Lopez 250ml",
+          "ml": 250,
+          "precio": 15500.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/sitios/cdigi/productos/aceite-oliva-virgen-extra-frantoio-lopez-250ml-/_/R-00573341-00573341-200",
+          "marca": "Lopez",
+          "precio_litro": 62000
         },
         {
           "supermercado": "La Anonima",
@@ -22670,6 +22692,17 @@
           "producto_id": "/art_3122736/",
           "marca": "Familia Zuccardi",
           "precio_litro": 59900
+        },
+        {
+          "supermercado": "La Anonima",
+          "nombre": "Quesitos en Aceite de Oliva Familia Weiss x 100 g.",
+          "ml": 100,
+          "precio": 8900.0,
+          "precio_sin_dto": null,
+          "en_oferta": false,
+          "producto_id": "/art_0342671/",
+          "marca": "Quesitos",
+          "precio_litro": 89000
         }
       ]
     }
