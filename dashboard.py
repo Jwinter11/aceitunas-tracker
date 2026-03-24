@@ -147,18 +147,60 @@ def _check_password():
         st.stop()
 
     st.markdown("""
-    <div style="display:flex;flex-direction:column;align-items:center;
-                justify-content:center;min-height:60vh;gap:1.2rem">
-      <div style="font-size:2.5rem">🫒</div>
-      <div style="font-size:1.5rem;font-weight:800;color:#0F172A">Aceite Tracker</div>
-      <div style="font-size:0.9rem;color:#6B7280">Ingresá la contraseña para continuar</div>
+    <style>
+      [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e8f5e9 50%, #fff8e1 100%);
+      }
+      [data-testid="stHeader"] { background: transparent !important; }
+      .login-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem 2.5rem 2.5rem 2.5rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        max-width: 360px;
+        margin: 8vh auto 0 auto;
+      }
+      .login-icon {
+        font-size: 3.2rem;
+        line-height: 1;
+        margin-bottom: 0.4rem;
+      }
+      .login-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #0F172A;
+        letter-spacing: -0.5px;
+      }
+      .login-subtitle {
+        font-size: 0.88rem;
+        color: #6B7280;
+        margin-bottom: 0.8rem;
+      }
+      .login-divider {
+        width: 40px;
+        height: 3px;
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+        border-radius: 4px;
+        margin: 0.3rem 0 1rem 0;
+      }
+    </style>
+    <div class="login-card">
+      <div class="login-icon">🫒</div>
+      <div class="login-title">Aceite Tracker</div>
+      <div class="login-divider"></div>
+      <div class="login-subtitle">Ingresá la contraseña para continuar</div>
     </div>
     """, unsafe_allow_html=True)
     _, col, _ = st.columns([2, 1.5, 2])
     with col:
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
         pwd = st.text_input("Contraseña", type="password", label_visibility="collapsed",
-                            placeholder="Contraseña…")
-        if st.button("Entrar", use_container_width=True, type="primary"):
+                            placeholder="🔒  Contraseña…")
+        if st.button("Entrar →", use_container_width=True, type="primary"):
             correct = st.secrets.get("PASSWORD", "")
             if pwd and pwd == correct:
                 st.session_state["_pwd_ok"] = True
@@ -956,8 +998,8 @@ if _page_sel == "📊  Resumen":
             _cp = (_pn - _pv) / _pv * 100
             if abs(_cp) < 3:
                 continue
-            if _cp < -15:
-                continue  # baja >15% = probable descuento no detectado, se omite
+            if _cp < -8:
+                continue  # baja >8% = probable descuento no detectado por scraper, se omite
             _cambios1.append({"cadena":_k[0],"sku":_k[1],
                                "viejo":_pv,"nuevo":_pn,"pct":_cp})
         _cambios1.sort(key=lambda x: abs(x["pct"]), reverse=True)
