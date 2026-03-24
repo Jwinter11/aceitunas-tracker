@@ -68,17 +68,12 @@ _PALABRAS_NO_MARCA: set[str] = {
 }
 
 
-def limpiar_marca_ac(marca: str, cadena: str, nombre: str = "") -> str:
+def limpiar_marca_ac(marca: str, cadena: str) -> str:
     """Corrige el nombre de marca extraído por el scraper."""
-    # Corrección especial por cadena
-    if marca in ("Morrón", "Morron", "Morrones", "C/morrón") and cadena == "Coto":
-        return "Yovinessa"
-    if marca in ("Morrón", "Morron", "Morrones", "C/morrón"):
-        return "Marvavic"
     # Correcciones directas
     if marca in _MARCA_CORRECCIONES:
         return _MARCA_CORRECCIONES[marca]
-    # Palabras que no son marcas → asignar a la cadena (quedará como Marca Propia)
+    # Palabras que no son marcas (ingredientes, descriptores) → Marca Propia de la cadena
     if marca in _PALABRAS_NO_MARCA:
         return cadena
     return marca
