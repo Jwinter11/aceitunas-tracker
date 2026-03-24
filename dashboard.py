@@ -629,7 +629,7 @@ def _historial_mtime():
     return p.stat().st_mtime if p.exists() else 0
 
 _URL_BASE_CADENA = {
-    "Carrefour":   "https://www.carrefour.com.ar",
+    # Solo cadenas donde el scraper guarda un path directo confiable (/slug/p)
     "Jumbo":       "https://www.jumbo.com.ar",
     "Disco":       "https://www.disco.com.ar",
     "Vea":         "https://www.vea.com.ar",
@@ -642,25 +642,12 @@ _URL_BASE_CADENA = {
     "Chango Más":  "https://www.masonline.com.ar",
 }
 
-_SEARCH_URL = {
-    "Carrefour":   "https://www.carrefour.com.ar/busca?q={}",
-    "Día":         "https://diaonline.supermercadosdia.com.ar/busca?q={}",
-    "Dia":         "https://diaonline.supermercadosdia.com.ar/busca?q={}",
-    "Chango Mas":  "https://www.masonline.com.ar/busca?q={}",
-    "Chango Más":  "https://www.masonline.com.ar/busca?q={}",
-    "La Anonima":  "https://www.laanonima.com.ar/busca/?q={}",
-    "La Anónima":  "https://www.laanonima.com.ar/busca/?q={}",
-}
-
 def _build_url(superm: str, pid: str, nombre: str) -> str | None:
-    nombre_enc = quote_plus(nombre)
     _base = _URL_BASE_CADENA.get(superm, "")
-    # Path directo (scraper lo guardó como /slug/p)
+    # Solo mostramos link si el scraper guardó un path directo (/slug/p)
     if _base and pid.startswith("/"):
         return _base + pid
-    # Fallback: búsqueda por nombre (datos viejos con ID numérico)
-    if superm in _SEARCH_URL:
-        return _SEARCH_URL[superm].format(nombre_enc)
+    # Carrefour: API no provee URLs confiables → sin link
     return None
 
 
