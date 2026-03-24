@@ -68,19 +68,38 @@ _PALABRAS_NO_MARCA: set[str] = {
 }
 
 
-def limpiar_marca_ac(marca: str, cadena: str) -> str:
+_MARCAS_CONOCIDAS: list[tuple[str, str]] = [
+    # (keyword en nombre en mayúsculas, marca a devolver)
+    ("CASTELL",     "Castell"),
+    ("NUCETE",      "Nucete"),
+    ("LA TOSCANA",  "La Toscana"),
+    ("TOSCANA",     "La Toscana"),
+    ("MORIXE",      "Morixe"),
+    ("OLIOVITA",    "Oliovita"),
+    ("VANOLI",      "Vanoli"),
+    ("MARVAVIC",    "Marvavic"),
+    ("YOVINESSA",   "Yovinessa"),
+    ("YBARRA",      "Ybarra"),
+]
+
+
+def limpiar_marca_ac(marca: str, cadena: str, nombre: str = "") -> str:
     """Corrige el nombre de marca extraído por el scraper."""
-    # Corrección especial por cadena
-    if marca in ("Morrón", "Morron", "Morrones", "C/morrón") and cadena == "Coto":
-        return "Yovinessa"
-    if marca in ("Morrón", "Morron", "Morrones", "C/morrón"):
-        return "Marvavic"
+    # Si la marca extraída es un sabor/relleno (no una marca real), intentar
+    # detectar la marca real desde el nombre del producto.
+    _MORRON_VALS = {"Morrón", "Morron", "Morrones", "C/morrón"}
+    if marca in _MORRON_VALS or marca in _PALABRAS_NO_MARCA:
+        nombre_up = nombre.upper()
+        for kw, marca_real in _MARCAS_CONOCIDAS:
+            if kw in nombre_up:
+                return marca_real
+        # Fallback: si no se detectó marca en el nombre, usar lógica por cadena
+        if marca in _MORRON_VALS:
+            return "Yovinessa" if cadena == "Coto" else "Marvavic"
+        return cadena
     # Correcciones directas
     if marca in _MARCA_CORRECCIONES:
         return _MARCA_CORRECCIONES[marca]
-    # Palabras que no son marcas → asignar a la cadena (quedará como Marca Propia)
-    if marca in _PALABRAS_NO_MARCA:
-        return cadena
     return marca
 
 
@@ -667,7 +686,7 @@ def cargar_datos_aceitunas(_mtime=None) -> pd.DataFrame:
         gondola = r["precio_sin_dto"] or precio
         desc    = round((gondola - precio) / gondola * 100) if gondola > precio else 0
         cadena  = r["supermercado"]
-        marca   = limpiar_marca_ac(r["marca"] or "Desconocida", cadena)
+        marca   = limpiar_marca_ac(r["marca"] or "Desconocida", cadena, r["nombre"] or "")
         var_raw = r["variedad"] or "Verde"
         var_unif = unificar_variedad(var_raw)
         marca_cat = categorizar_marca_ac(marca)
