@@ -1027,17 +1027,24 @@ if active_page == "Resumen":
     # Cambios de precio ≥ 3% vs semana anterior
     _cambios: list[dict] = []
     if _ult_p and _pen_p:
-        _avg_u = dff[dff["Periodo"] == _ult_p].groupby(["Cadena", "SKU_canonico"])["Precio"].mean()
-        _avg_p = dff[dff["Periodo"] == _pen_p].groupby(["Cadena", "SKU_canonico"])["Precio"].mean()
-        _url_map = (dff[dff["Periodo"] == _ult_p]
-                    .dropna(subset=["URL"])
-                    .groupby(["Cadena", "SKU_canonico"])["URL"].first())
-        for _k in _avg_u.index.intersection(_avg_p.index):
-            _pn, _pv = float(_avg_u[_k]), float(_avg_p[_k])
+        # Comparar producto a producto (no agrupado por SKU_canonico) para
+        # evitar mezclar productos distintos bajo el mismo bucket de gramaje.
+        _df_u = (dff[dff["Periodo"] == _ult_p]
+                 .groupby(["Cadena", "Producto"])
+                 .agg(Precio=("Precio", "mean"), URL=("URL", "first"))
+                 .reset_index())
+        _df_p = (dff[dff["Periodo"] == _pen_p]
+                 .groupby(["Cadena", "Producto"])["Precio"].mean()
+                 .reset_index())
+        _merged = _df_u.merge(_df_p, on=["Cadena", "Producto"], suffixes=("_n", "_v"))
+        for _, _row in _merged.iterrows():
+            _pn, _pv = float(_row["Precio_n"]), float(_row["Precio_v"])
+            if _pv == 0:
+                continue
             _cp = (_pn - _pv) / _pv * 100
             if abs(_cp) >= 3:
-                _url_c = _url_map.get(_k, "")
-                _cambios.append({"cadena": _k[0], "sku": _k[1],
+                _url_c = _row.get("URL", "")
+                _cambios.append({"cadena": _row["Cadena"], "sku": _row["Producto"],
                                  "viejo": _pv, "nuevo": _pn, "pct": _cp,
                                  "url": _url_c if isinstance(_url_c, str) else ""})
         _cambios.sort(key=lambda x: abs(x["pct"]), reverse=True)
