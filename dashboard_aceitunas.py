@@ -1627,12 +1627,17 @@ if active_page == "Evolución":
     _vars_ev_disp    = sorted(_ev_base["Variedad"].dropna().unique())
     _skus_ev_disp    = sorted(_ev_base["Producto"].dropna().unique())
 
-    def _ev_layout(height=400):
-        return dict(**_BASE_CORE, height=height,
-                    margin=dict(l=10, r=10, t=40, b=10),
-                    yaxis=dict(tickprefix="$", tickformat=",", tickfont=dict(color="#111827")),
-                    xaxis=dict(tickfont=dict(color="#111827"), type="date", tickformat="%d %b '%y"),
-                    legend=dict(font=dict(color="#111827"), bgcolor="rgba(0,0,0,0)"))
+    def _ev_layout(height=400, legend_override=None):
+        base = {**_BASE_CORE}
+        base.update(dict(
+            height=height,
+            margin=dict(l=10, r=10, t=40, b=10),
+            yaxis=dict(tickprefix="$", tickformat=",", tickfont=dict(color="#111827")),
+            xaxis=dict(tickfont=dict(color="#111827"), type="date", tickformat="%d %b '%y"),
+        ))
+        if legend_override:
+            base["legend"] = legend_override
+        return base
 
     # ── Gráfico 1: Evolución por Marca ──────────────────────────────────────
     with st.expander("📈 Evolución de precio por Marca ($/kg)", expanded=True):
@@ -1739,10 +1744,9 @@ if active_page == "Evolución":
                     marker=dict(size=6),
                     hovertemplate=f"<b>{_prod}</b><br>%{{x|%d %b %Y}}<br>${{y:,.0f}}/kg<extra></extra>",
                 ))
-            _fig2.update_layout(**_ev_layout(450),
-                                legend=dict(orientation="v", x=1.01, xanchor="left",
-                                            font=dict(size=10, color="#111827"),
-                                            bgcolor="rgba(0,0,0,0)"))
+            _fig2.update_layout(**_ev_layout(450, legend_override=dict(
+                orientation="v", x=1.01, xanchor="left",
+                font=dict(size=10, color="#111827"), bgcolor="rgba(0,0,0,0)")))
             st.plotly_chart(_fig2, use_container_width=True)
 
 
