@@ -1179,25 +1179,15 @@ if _page_sel == "📊  Resumen":
                                           r["p_ant"], r["p_act"], "#16A34A"),
                                     unsafe_allow_html=True)
                 with _col_o:
-                    _n_of_total = len(_con_of_act) + len(_bajas_verificar)
-                    _titulo_col("🏷️", "Ofertas activas", _n_of_total, subtitulo="")
-                    # Unificar y ordenar todo por descuento mayor a menor
-                    _of_unif = []
-                    for _, r in _con_of_act.iterrows():
-                        _of_unif.append({
-                            "Producto": r["Producto"], "Cadena": r["Cadena"],
-                            "pct": float(r["desc"]), "pct_str": f"{r['desc']:.0f}% dto.",
-                            "p_de": r["p_gond"], "p_a": r["p_of"],
-                            "url": r.get("Producto_url", ""),
-                        })
-                    for _, r in _bajas_verificar.iterrows():
-                        _of_unif.append({
-                            "Producto": r["Producto"], "Cadena": r["Cadena"],
-                            "pct": abs(float(r["delta_pct"])), "pct_str": f"{r['delta_pct']:+.1f}%",
-                            "p_de": r["p_ant"], "p_a": r["p_act"],
-                            "url": r.get("Producto_url", ""),
-                        })
-                    _of_unif.sort(key=lambda x: x["pct"], reverse=True)
+                    # Solo productos marcados como en_oferta=True por el scraper
+                    _titulo_col("🏷️", "Ofertas activas", len(_con_of_act), subtitulo="")
+                    _of_unif = sorted(
+                        [{"Producto": r["Producto"], "Cadena": r["Cadena"],
+                          "pct": float(r["desc"]), "pct_str": f"{r['desc']:.0f}% dto.",
+                          "p_de": r["p_gond"], "p_a": r["p_of"],
+                          "url": r.get("Producto_url", "")}
+                         for _, r in _con_of_act.iterrows()],
+                        key=lambda x: x["pct"], reverse=True)
                     if not _of_unif:
                         st.markdown("<span style='color:#111827;font-size:0.82rem'>Sin ofertas activas.</span>", unsafe_allow_html=True)
                     _of_html = "".join(
