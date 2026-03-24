@@ -1627,6 +1627,62 @@ if _page_sel == "📈  Evolución":
                           legend_title_font_color="#111827")
         _pchart(fig)
 
+        # ── Análisis de composición por marca ────────────────────────────────
+        if len(orden_per) >= 2:
+            _per_ant4 = orden_per[-2]
+            _per_act4 = orden_per[-1]
+            _df_ant4  = dff4[(dff4["Periodo"]==_per_ant4) & (dff4["Marca"].isin(cats_evol))]
+            _df_act4  = dff4[(dff4["Periodo"]==_per_act4) & (dff4["Marca"].isin(cats_evol))]
+            _insights = []
+            for _marca4 in cats_evol:
+                _ma = _df_ant4[_df_ant4["Marca"]==_marca4]
+                _mb = _df_act4[_df_act4["Marca"]==_marca4]
+                if _ma.empty or _mb.empty:
+                    continue
+                _p_ant4 = _ma[_col_precio4].mean()
+                _p_act4 = _mb[_col_precio4].mean()
+                _delta_pct = (_p_act4 - _p_ant4) / _p_ant4 * 100
+                if abs(_delta_pct) < 4:
+                    continue
+                _key4 = ["SKU_canonico", "Cadena"]
+                _skus_a = set(map(tuple, _ma[_key4].drop_duplicates().values))
+                _skus_b = set(map(tuple, _mb[_key4].drop_duplicates().values))
+                _comunes = _skus_a & _skus_b
+                _salieron = _skus_a - _skus_b
+                _entraron = _skus_b - _skus_a
+                _precio_comun_ant = _ma[_ma.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
+                                        ][_col_precio4].mean() if _comunes else None
+                _precio_comun_act = _mb[_mb.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
+                                        ][_col_precio4].mean() if _comunes else None
+                _precio_salieron = (_ma[_ma.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _salieron, axis=1)][_col_precio4].mean() if _salieron else None)
+                _precio_entraron = (_mb[_mb.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _entraron, axis=1)][_col_precio4].mean() if _entraron else None)
+                _cads_sal = set(_ma["Cadena"].unique()) - set(_mb["Cadena"].unique())
+                _cads_ent = set(_mb["Cadena"].unique()) - set(_ma["Cadena"].unique())
+                _arrow = "▲" if _delta_pct > 0 else "▼"
+                _color = "#DC2626" if _delta_pct > 0 else "#16A34A"
+                _partes_txt = []
+                if _comunes and _precio_comun_ant and _precio_comun_act:
+                    _dp = (_precio_comun_act - _precio_comun_ant) / _precio_comun_ant * 100
+                    _partes_txt.append(f"SKUs en común {'subieron' if _dp>0 else 'bajaron'} {abs(_dp):.1f}%" if abs(_dp) >= 2 else "precios en común sin cambio significativo")
+                if _salieron:
+                    _vs = "por encima" if _precio_salieron and _precio_salieron > _p_ant4 else "por debajo"
+                    _cad_sal_txt = f" (de {', '.join(_cads_sal)})" if _cads_sal else ""
+                    _partes_txt.append(f"salieron {len(_salieron)} SKU{'s' if len(_salieron)>1 else ''}{_cad_sal_txt} a ${_precio_salieron:,.0f} ({_vs} del promedio)" if _precio_salieron else f"salieron {len(_salieron)} SKUs{_cad_sal_txt}")
+                if _entraron:
+                    _vs2 = "por encima" if _precio_entraron and _precio_entraron > _p_ant4 else "por debajo"
+                    _cad_ent_txt = f" (de {', '.join(_cads_ent)})" if _cads_ent else ""
+                    _partes_txt.append(f"entraron {len(_entraron)} SKU{'s' if len(_entraron)>1 else ''} nuevos{_cad_ent_txt} a ${_precio_entraron:,.0f} ({_vs2} del promedio)" if _precio_entraron else f"entraron {len(_entraron)} SKUs nuevos{_cad_ent_txt}")
+                _explicacion = "; ".join(_partes_txt) + "." if _partes_txt else "cambio por variación en el mix de productos."
+                _insights.append((_marca4, _delta_pct, _arrow, _color, _p_ant4, _p_act4, _explicacion))
+            if _insights:
+                st.markdown('<div class="chart-note" style="margin-top:0.5rem">🔍 Análisis de cambios entre períodos</div>', unsafe_allow_html=True)
+                for _, (_mn, _dp, _arr, _clr, _pa, _pb, _exp) in enumerate(_insights):
+                    _mc = COLORES_CAT.get(_mn, "#6B7280")
+                    st.markdown(f"""<div style="display:flex;align-items:flex-start;gap:0.9rem;background:#FAFAFA;border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.5rem;border-left:4px solid {_mc}">
+                      <div style="min-width:90px;font-weight:700;color:{_mc};font-size:0.85rem">{_mn}</div>
+                      <div style="min-width:120px;font-size:0.85rem"><span style="color:#6B7280">${_pa:,.0f}</span><span style="margin:0 4px;color:#9CA3AF">→</span><span style="font-weight:700;color:{_clr}">${_pb:,.0f}</span><span style="margin-left:6px;font-weight:700;color:{_clr}">{_arr}{abs(_dp):.1f}%</span></div>
+                      <div style="font-size:0.78rem;color:#374151;flex:1">{_exp}</div></div>""", unsafe_allow_html=True)
+
     with st.expander("Evolución precio de góndola promedio por SKU", expanded=True):
         # Filtros propios de este gráfico
         _fsku_a, _fsku_b = st.columns([2, 3])
@@ -1665,101 +1721,46 @@ if _page_sel == "📈  Evolución":
                                   legend_font_size=11)
             _pchart(fig_sku)
 
-        # ── Análisis de composición: por qué cambió el promedio ──────────────
-        if len(orden_per) >= 2:
-            _per_ant4 = orden_per[-2]
-            _per_act4 = orden_per[-1]
-            _df_ant4  = dff4[(dff4["Periodo"]==_per_ant4) & (dff4["Marca"].isin(cats_evol))]
-            _df_act4  = dff4[(dff4["Periodo"]==_per_act4) & (dff4["Marca"].isin(cats_evol))]
-
-            _insights = []
-            for _marca4 in cats_evol:
-                _ma = _df_ant4[_df_ant4["Marca"]==_marca4]
-                _mb = _df_act4[_df_act4["Marca"]==_marca4]
-                if _ma.empty or _mb.empty:
+        # ── Análisis de cambios por SKU entre períodos ───────────────────────
+        if len(orden_per) >= 2 and _sku_sku4_sel:
+            _per_ant4s = orden_per[-2]
+            _per_act4s = orden_per[-1]
+            _insights_sku = []
+            for _sku4 in _sku_sku4_sel:
+                _sa = _src_chart4[(_src_chart4["Periodo"]==_per_ant4s) & (_src_chart4["SKU_canonico"]==_sku4)]
+                _sb = _src_chart4[(_src_chart4["Periodo"]==_per_act4s) & (_src_chart4["SKU_canonico"]==_sku4)]
+                if _sa.empty and _sb.empty:
                     continue
-                _p_ant4 = _ma[_col_precio4].mean()
-                _p_act4 = _mb[_col_precio4].mean()
-                _delta_pct = (_p_act4 - _p_ant4) / _p_ant4 * 100
-                if abs(_delta_pct) < 4:
-                    continue  # sin cambio relevante
-
-                # SKUs presentes en ambos períodos (clave = SKU_canonico + Cadena)
-                _key4 = ["SKU_canonico", "Cadena"]
-                _skus_a = set(map(tuple, _ma[_key4].drop_duplicates().values))
-                _skus_b = set(map(tuple, _mb[_key4].drop_duplicates().values))
-                _comunes = _skus_a & _skus_b
-                _salieron = _skus_a - _skus_b
-                _entraron = _skus_b - _skus_a
-
-                # Efecto precio: cambio de precio en SKUs comunes
-                _precio_comun_ant = _ma[_ma.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
-                                        ][_col_precio4].mean() if _comunes else None
-                _precio_comun_act = _mb[_mb.set_index(_key4).index.isin(pd.MultiIndex.from_tuples(_comunes)) if _comunes else []
-                                        ][_col_precio4].mean() if _comunes else None
-
-                # Promedio de precios que salieron y entraron
-                _precio_salieron = (_ma[_ma.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _salieron, axis=1)][_col_precio4].mean()
-                                    if _salieron else None)
-                _precio_entraron = (_mb[_mb.apply(lambda r: (r["SKU_canonico"],r["Cadena"]) in _entraron, axis=1)][_col_precio4].mean()
-                                    if _entraron else None)
-
-                # Cadenas que entraron/salieron
-                _cads_a = set(_ma["Cadena"].unique())
-                _cads_b = set(_mb["Cadena"].unique())
-                _cads_sal = _cads_a - _cads_b
-                _cads_ent = _cads_b - _cads_a
-
-                # Armar explicación
-                _arrow = "▲" if _delta_pct > 0 else "▼"
-                _color = "#DC2626" if _delta_pct > 0 else "#16A34A"
-                _partes_txt = []
-
-                if _comunes and _precio_comun_ant and _precio_comun_act:
-                    _dp = (_precio_comun_act - _precio_comun_ant) / _precio_comun_ant * 100
-                    if abs(_dp) >= 2:
-                        _partes_txt.append(f"los SKUs en común {'subieron' if _dp>0 else 'bajaron'} {abs(_dp):.1f}% en promedio")
-                    else:
-                        _partes_txt.append("los precios de los SKUs en común no cambiaron significativamente")
-
-                if _salieron:
-                    _avg_sal = _precio_salieron
-                    _vs = "por encima" if _avg_sal and _avg_sal > _p_ant4 else "por debajo"
-                    _skus_sal_names = sorted(set(s[0] for s in _salieron))[:2]
-                    _txt_sal = ", ".join(_skus_sal_names)
-                    _cad_sal_txt = f" (de {', '.join(_cads_sal)})" if _cads_sal else ""
-                    _partes_txt.append(f"dejaron de estar {len(_salieron)} SKU{'s' if len(_salieron)>1 else ''}{_cad_sal_txt} con precio {'$' + f'{_avg_sal:,.0f}' if _avg_sal else ''} ({_vs} del promedio anterior)")
-
-                if _entraron:
-                    _avg_ent = _precio_entraron
-                    _vs2 = "por encima" if _avg_ent and _avg_ent > _p_ant4 else "por debajo"
-                    _cad_ent_txt = f" (de {', '.join(_cads_ent)})" if _cads_ent else ""
-                    _partes_txt.append(f"aparecieron {len(_entraron)} SKU{'s' if len(_entraron)>1 else ''} nuevos{_cad_ent_txt} con precio {'$' + f'{_avg_ent:,.0f}' if _avg_ent else ''} ({_vs2} del promedio)")
-
-                _explicacion = "; ".join(_partes_txt) + "." if _partes_txt else "cambio por variación en el mix de productos."
-                _insights.append((_marca4, _delta_pct, _arrow, _color,
-                                   _p_ant4, _p_act4, _explicacion))
-
-            if _insights:
-                st.markdown('<div class="chart-note" style="margin-top:0.5rem">🔍 Análisis de cambios entre períodos</div>',
-                            unsafe_allow_html=True)
-                for _mi, (_mn, _dp, _arr, _clr, _pa, _pb, _exp) in enumerate(_insights):
-                    _mc = COLORES_CAT.get(_mn, "#6B7280")
-                    st.markdown(f"""
-                    <div style="display:flex;align-items:flex-start;gap:0.9rem;
-                                background:#FAFAFA;border-radius:10px;
-                                padding:0.7rem 1rem;margin-bottom:0.5rem;
-                                border-left:4px solid {_mc}">
-                      <div style="min-width:90px;font-weight:700;color:{_mc};font-size:0.85rem">{_mn}</div>
-                      <div style="min-width:110px;font-size:0.85rem">
-                        <span style="color:#6B7280">${_pa:,.0f}</span>
-                        <span style="margin:0 4px;color:#9CA3AF">→</span>
-                        <span style="font-weight:700;color:{_clr}">${_pb:,.0f}</span>
-                        <span style="margin-left:6px;font-weight:700;color:{_clr}">{_arr}{abs(_dp):.1f}%</span>
-                      </div>
-                      <div style="font-size:0.78rem;color:#374151;flex:1">{_exp}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                _pa_sku = _sa[_col_precio4].mean() if not _sa.empty else None
+                _pb_sku = _sb[_col_precio4].mean() if not _sb.empty else None
+                _dp_sku = ((_pb_sku - _pa_sku) / _pa_sku * 100) if (_pa_sku and _pb_sku) else None
+                _cads_ant = set(_sa["Cadena"].unique())
+                _cads_act = set(_sb["Cadena"].unique())
+                _cads_sal2 = _cads_ant - _cads_act
+                _cads_ent2 = _cads_act - _cads_ant
+                _partes_sku = []
+                if _cads_ent2:
+                    _partes_sku.append(f"entró en {', '.join(sorted(_cads_ent2))}")
+                if _cads_sal2:
+                    _partes_sku.append(f"salió de {', '.join(sorted(_cads_sal2))}")
+                if _dp_sku is not None and abs(_dp_sku) >= 2:
+                    _partes_sku.append(f"precio promedio {'subió' if _dp_sku>0 else 'bajó'} {abs(_dp_sku):.1f}%")
+                elif _dp_sku is not None:
+                    _partes_sku.append("precio sin cambio significativo")
+                _exp_sku = "; ".join(_partes_sku) + "." if _partes_sku else "sin cambios detectados."
+                _arr_sku = ("▲" if (_dp_sku or 0) > 0 else "▼") if _dp_sku else "→"
+                _clr_sku = "#DC2626" if (_dp_sku or 0) > 0 else ("#16A34A" if (_dp_sku or 0) < 0 else "#6B7280")
+                _insights_sku.append((_sku4, _dp_sku, _arr_sku, _clr_sku, _pa_sku, _pb_sku, _exp_sku))
+            if _insights_sku:
+                st.markdown('<div class="chart-note" style="margin-top:0.5rem">🔍 Análisis de cambios entre períodos · por SKU</div>', unsafe_allow_html=True)
+                for _, (_sn, _dp2, _arr2, _clr2, _pa2, _pb2, _exp2) in enumerate(_insights_sku):
+                    _pa_txt = f"${_pa2:,.0f}" if _pa2 else "—"
+                    _pb_txt = f"${_pb2:,.0f}" if _pb2 else "—"
+                    _dp_txt = f"{_arr2}{abs(_dp2):.1f}%" if _dp2 else "nuevo"
+                    st.markdown(f"""<div style="display:flex;align-items:flex-start;gap:0.9rem;background:#FAFAFA;border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.5rem;border-left:4px solid {_clr2}">
+                      <div style="min-width:140px;font-weight:700;color:#111827;font-size:0.82rem">{_sn}</div>
+                      <div style="min-width:120px;font-size:0.85rem"><span style="color:#6B7280">{_pa_txt}</span><span style="margin:0 4px;color:#9CA3AF">→</span><span style="font-weight:700;color:{_clr2}">{_pb_txt}</span><span style="margin-left:6px;font-weight:700;color:{_clr2}">{_dp_txt}</span></div>
+                      <div style="font-size:0.78rem;color:#374151;flex:1">{_exp2}</div></div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 5 · OFERTAS
