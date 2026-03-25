@@ -387,7 +387,7 @@ def _parsear_precio_disco(texto: str) -> float | None:
 
 
 # JS que corre dentro de la página Playwright para extraer productos con precios
-_JS_EXTRAER_CENCOSUD = """() => {
+_JS_EXTRAER_CENCOSUD = r"""() => {
     // Contenedor: galleryItem (cada tarjeta de producto en la grilla VTEX)
     const cards = document.querySelectorAll('[class*="galleryItem"]');
     const result = [];
