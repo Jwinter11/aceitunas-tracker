@@ -629,7 +629,7 @@ def _historial_mtime():
     return p.stat().st_mtime if p.exists() else 0
 
 _URL_BASE_CADENA = {
-    # Solo cadenas donde el scraper guarda un path directo confiable (/slug/p)
+    "Carrefour":   "https://www.carrefour.com.ar",
     "Jumbo":       "https://www.jumbo.com.ar",
     "Disco":       "https://www.disco.com.ar",
     "Vea":         "https://www.vea.com.ar",
@@ -643,11 +643,13 @@ _URL_BASE_CADENA = {
 }
 
 def _build_url(superm: str, pid: str, nombre: str) -> str | None:
+    # URL absoluta guardada directamente por el scraper (Carrefour, Día)
+    if pid.startswith("http"):
+        return pid
+    # Path relativo (/slug/p) → prepend base (Cencosud, Chango)
     _base = _URL_BASE_CADENA.get(superm, "")
-    # Solo mostramos link si el scraper guardó un path directo (/slug/p)
     if _base and pid.startswith("/"):
         return _base + pid
-    # Carrefour: API no provee URLs confiables → sin link
     return None
 
 

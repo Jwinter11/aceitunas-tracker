@@ -200,11 +200,15 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                 nombre = item.get("productName", "")
                 if not es_aceite_oliva(nombre):
                     continue
-                prod_id   = item.get("productId", nombre)   # solo para dedup
-                link_text = item.get("linkText", "")        # slug para URL real
+                prod_id = str(item.get("productId", nombre))   # solo para dedup
                 if prod_id in vistos:
                     continue
                 vistos.add(prod_id)
+
+                # URL real del producto (igual que scraper aceitunas)
+                link = item.get("link") or ""
+                if link and not link.startswith("http"):
+                    link = base_url.rstrip("/") + link
 
                 # Obtener precios desde el primer sku disponible
                 skus = item.get("items", [])
@@ -264,7 +268,7 @@ def scrape_vtex(supermercado: str, base_url: str) -> list[dict]:
                     "precio":         round(price, 2),
                     "precio_sin_dto":  round(precio_sin, 2) if precio_sin else None,
                     "en_oferta":      en_oferta,
-                    "producto_id":    f"/{link_text}/p" if link_text else str(prod_id),
+                    "producto_id":    link if link else prod_id,
                 })
                 nuevos += 1
 
