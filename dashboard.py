@@ -1165,7 +1165,16 @@ if _page_sel == "📊  Resumen":
               <div style="font-size:0.71rem;color:#374151;line-height:1.4">{detalle}</div>
             </div>""", unsafe_allow_html=True)
 
-        _ins = dff.copy()
+        # Siempre usar los últimos 30 días (independiente del filtro del usuario)
+        _ins_fecha_max = df_full["Fecha"].max()
+        _ins_fecha_min = _ins_fecha_max - pd.Timedelta(days=30)
+        _ins = df_full[df_full["Fecha"] >= _ins_fecha_min].copy()
+        st.markdown(
+            f'<div style="font-size:0.72rem;color:#6B7280;margin-bottom:0.9rem">'
+            f'Promedio del último mes &nbsp;·&nbsp; '
+            f'{_ins_fecha_min.strftime("%d/%m")} – {_ins_fecha_max.strftime("%d/%m/%Y")}</div>',
+            unsafe_allow_html=True,
+        )
         _ins_pl = _ins.dropna(subset=["Precio_litro"])
         _by_marca_ins = (_ins.groupby("Marca_raw").agg(
             precio_medio=("Precio","mean"), n=("Precio","count"),
@@ -1174,7 +1183,7 @@ if _page_sel == "📊  Resumen":
         _pl_s2i = (_pl_s1i.groupby(["Marca_raw","SKU_canonico"])["Precio_litro"].mean().reset_index())
         _by_marca_pli = (_pl_s2i.groupby("Marca_raw")["Precio_litro"].mean().reset_index().rename(columns={"Precio_litro":"pl_medio"}))
         _by_marca_ins = _by_marca_ins.merge(_by_marca_pli, on="Marca_raw", how="left")
-        _of_ins_r = (df_full[df_full["Cadena"].isin(cadenas_sel)]
+        _of_ins_r = (_ins
                      .groupby("Marca_raw")["En_oferta"].apply(lambda d: d.mean()*100)
                      .reset_index(name="pct_oferta"))
         _by_marca_ins = _by_marca_ins.merge(_of_ins_r, on="Marca_raw", how="left")
@@ -1233,7 +1242,7 @@ if _page_sel == "📊  Resumen":
                 _insight_card("🔥","Marca con más descuentos", _mo_i["Marca_raw"],
                               f"{_mo_i['pct_oferta']:.0f}% de registros en oferta","#DC2626")
         with _ri2d:
-            _cad_of_i = (df_full[df_full["Cadena"].isin(cadenas_sel)]
+            _cad_of_i = (_ins
                          .groupby("Cadena")["En_oferta"].apply(lambda d: d.mean()*100)
                          .reset_index(name="pct").sort_values("pct", ascending=False))
             if not _cad_of_i.empty:
