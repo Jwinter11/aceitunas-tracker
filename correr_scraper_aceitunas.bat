@@ -2,7 +2,7 @@
 cd /d "C:\Users\Julian\OneDrive\Escritorio\Aceite_tracker"
 
 REM ── 1. Correr scraper de aceitunas ────────────────────────────────────────
-"C:\Users\Julian\AppData\Local\Python\pythoncore-3.14-64\python.exe" scraper_aceitunas.py >> logs_scraper_aceitunas.txt 2>&1
+"C:\Users\Julian\AppData\Local\Python\pythoncore-3.14-64\python.exe" scraper_aceitunas.py --auto >> logs_scraper_aceitunas.txt 2>&1
 if errorlevel 1 (
     echo [%date% %time%] ERROR: scraper_aceitunas fallo, no se pushea a GitHub >> logs_scraper_aceitunas.txt
     exit /b 1
