@@ -1066,8 +1066,8 @@ if active_page == "Resumen":
     _top_of: list[dict] = []
     _dest_of: list[dict] = []
     if not _of_now.empty:
-        # URL: la del producto con mayor descuento en cada grupo (no .first() genérico)
-        _of_url_df = (_of_now.sort_values("Descuento_pct", ascending=False)
+        # URL: la del producto con menor precio de oferta (mismo que se muestra en la card)
+        _of_url_df = (_of_now.sort_values("Precio_oferta", ascending=True)
                       .dropna(subset=["URL"])
                       .groupby(["Cadena", "SKU_canonico", "Marca_cat"])["URL"]
                       .first().reset_index())
