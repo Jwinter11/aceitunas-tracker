@@ -1648,13 +1648,23 @@ if active_page == "Evolución":
     _vars_ev_disp    = sorted(_ev_base["Variedad"].dropna().unique())
     _skus_ev_disp    = sorted(_ev_base["Producto"].dropna().unique())
 
-    def _ev_layout(height=400, legend_override=None):
+    def _ev_layout(height=400, legend_override=None, gran="Día", tickvals=None):
         base = {**_BASE_CORE}
+        if gran == "Mes":
+            x_fmt, x_dtick = "%b '%y", "M1"
+        elif gran == "Semana":
+            x_fmt, x_dtick = "%d %b '%y", "D7"
+        else:
+            x_fmt, x_dtick = "%d %b '%y", "D1"
+        xaxis_cfg = dict(tickfont=dict(color="#111827"), type="date",
+                         tickformat=x_fmt, dtick=x_dtick)
+        if tickvals is not None:
+            xaxis_cfg.update(tickmode="array", tickvals=tickvals)
         base.update(dict(
             height=height,
             margin=dict(l=10, r=10, t=40, b=10),
             yaxis=dict(tickprefix="$", tickformat=",", tickfont=dict(color="#111827")),
-            xaxis=dict(tickfont=dict(color="#111827"), type="date", tickformat="%d %b '%y"),
+            xaxis=xaxis_cfg,
         ))
         if legend_override:
             base["legend"] = legend_override
@@ -1715,7 +1725,8 @@ if active_page == "Evolución":
                     line=dict(color=_col, width=2),
                     marker=dict(size=6),
                 ))
-            _fig1.update_layout(**_ev_layout(420))
+            _tv1 = sorted(_grp1["Fecha"].unique())
+            _fig1.update_layout(**_ev_layout(420, gran=_ev1_gran, tickvals=_tv1))
             st.plotly_chart(_fig1, use_container_width=True)
 
     # ── Gráfico 2: Evolución por SKU (producto individual) ──────────────────
@@ -1780,7 +1791,9 @@ if active_page == "Evolución":
                     marker=dict(size=6),
                     hovertemplate=f"<b>{_prod}</b><br>%{{x|%d %b %Y}}<br>${{y:,.0f}}/kg<extra></extra>",
                 ))
-            _fig2.update_layout(**_ev_layout(450, legend_override=dict(
+            _tv2 = sorted(_grp2["Fecha"].unique())
+            _fig2.update_layout(**_ev_layout(450, gran=_ev2_gran, tickvals=_tv2,
+                                             legend_override=dict(
                 orientation="v", x=1.01, xanchor="left",
                 font=dict(size=10, color="#111827"), bgcolor="rgba(0,0,0,0)")))
             st.plotly_chart(_fig2, use_container_width=True)
