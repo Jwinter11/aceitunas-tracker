@@ -1623,6 +1623,27 @@ if active_page == "Por Marca":
 if active_page == "Evolución":
 
     _ev_base = dff.dropna(subset=["Precio_100g"]).copy()
+
+    # Deduplicar: si hay 2 scrapes en el mismo día, quedarse con el último
+    _ev_base["Fecha_dia"] = pd.to_datetime(_ev_base["Fecha"]).dt.date
+    _ev_base = (
+        _ev_base.sort_values("Fecha")
+        .drop_duplicates(subset=["Fecha_dia", "Cadena", "Producto"], keep="last")
+        .copy()
+    )
+
+    def _agg_fecha_ev(df: pd.DataFrame, gran: str) -> pd.DataFrame:
+        """Devuelve df con columna '_fev' = fecha agrupada según granularidad."""
+        df = df.copy()
+        fechas = pd.to_datetime(df["Fecha_dia"])
+        if gran == "Semana":
+            df["_fev"] = fechas.dt.to_period("W-MON").dt.start_time.dt.date
+        elif gran == "Mes":
+            df["_fev"] = fechas.dt.to_period("M").dt.start_time.dt.date
+        else:
+            df["_fev"] = df["Fecha_dia"]
+        return df
+
     _marcas_ev_disp  = sorted(_ev_base["Marca_cat"].dropna().unique())
     _vars_ev_disp    = sorted(_ev_base["Variedad"].dropna().unique())
     _skus_ev_disp    = sorted(_ev_base["Producto"].dropna().unique())
@@ -1641,6 +1662,12 @@ if active_page == "Evolución":
 
     # ── Gráfico 1: Evolución por Marca ──────────────────────────────────────
     with st.expander("📈 Evolución de precio por Marca ($/kg)", expanded=True):
+        # — Toggle granularidad —
+        _g1_col_gran, _ = st.columns([2, 8])
+        with _g1_col_gran:
+            _ev1_gran = st.radio("Ver por", ["Día", "Semana", "Mes"],
+                                 horizontal=True, key="ev1_gran")
+        # — Filtros —
         _f1c1, _f1c2, _f1c3, _f1c4, _f1c5 = st.columns(5)
         with _f1c1:
             st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Gramaje</p>', unsafe_allow_html=True)
@@ -1674,11 +1701,13 @@ if active_page == "Evolución":
         if _d1.empty:
             st.info("Sin datos con esta selección.")
         else:
-            _grp1 = (_d1.groupby(["Fecha", "Marca_cat"])["Precio_100g"]
-                     .mean().mul(10).round(0).reset_index())
+            _d1 = _agg_fecha_ev(_d1, _ev1_gran)
+            _grp1 = (_d1.groupby(["_fev", "Marca_cat"])["Precio_100g"]
+                     .mean().mul(10).round(0).reset_index()
+                     .rename(columns={"_fev": "Fecha"}))
             _fig1 = go.Figure()
             for _m in sorted(_grp1["Marca_cat"].unique()):
-                _sub = _grp1[_grp1["Marca_cat"] == _m]
+                _sub = _grp1[_grp1["Marca_cat"] == _m].sort_values("Fecha")
                 _col = COLORES_MARCA_AC.get(_m, "#9CA3AF")
                 _fig1.add_trace(go.Scatter(
                     x=_sub["Fecha"], y=_sub["Precio_100g"],
@@ -1691,6 +1720,12 @@ if active_page == "Evolución":
 
     # ── Gráfico 2: Evolución por SKU (producto individual) ──────────────────
     with st.expander("🔍 Evolución de precio por SKU ($/kg)", expanded=True):
+        # — Toggle granularidad —
+        _g2_col_gran, _ = st.columns([2, 8])
+        with _g2_col_gran:
+            _ev2_gran = st.radio("Ver por", ["Día", "Semana", "Mes"],
+                                 horizontal=True, key="ev2_gran")
+        # — Filtros —
         _f2c1, _f2c2, _f2c3, _f2c4, _f2c5 = st.columns(5)
         with _f2c1:
             st.markdown('<p style="font-size:0.78rem;font-weight:700;color:#111827;margin-bottom:2px">Gramaje</p>', unsafe_allow_html=True)
@@ -1726,14 +1761,15 @@ if active_page == "Evolución":
         if _d2.empty or (not _ev2_skus and _ev2_marca == "Todas" and _ev2_var == "Todas"):
             st.info("Usá los filtros de arriba para elegir productos específicos a comparar.")
         else:
-            # Agrupar por (Fecha, Cadena, Producto) para mostrar precio real por SKU
-            _grp2 = (_d2.groupby(["Fecha", "Producto"])["Precio_100g"]
-                     .mean().mul(10).round(0).reset_index())
+            _d2 = _agg_fecha_ev(_d2, _ev2_gran)
+            _grp2 = (_d2.groupby(["_fev", "Producto"])["Precio_100g"]
+                     .mean().mul(10).round(0).reset_index()
+                     .rename(columns={"_fev": "Fecha"}))
             _fig2 = go.Figure()
             _palette = ["#0F3460","#16A34A","#DC2626","#D97706","#7C3AED",
                         "#0891B2","#DB2777","#65A30D","#EA580C","#0284C7"]
             for _i, _prod in enumerate(_grp2["Producto"].unique()):
-                _sub2 = _grp2[_grp2["Producto"] == _prod]
+                _sub2 = _grp2[_grp2["Producto"] == _prod].sort_values("Fecha")
                 _col2 = _palette[_i % len(_palette)]
                 # Nombre corto para la leyenda
                 _lbl = _prod if len(_prod) <= 45 else _prod[:43] + "…"
