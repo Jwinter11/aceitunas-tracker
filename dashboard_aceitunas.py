@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# última actualización: 2026-03-23
+# última actualización: 2026-03-26
 """
 Dashboard de precios de aceitunas — Aceite Tracker
 Uso: streamlit run dashboard_aceitunas.py --server.port 8502
